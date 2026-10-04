@@ -22,6 +22,7 @@ export default function App() {
         'phone:threads',
         'phone:notes',
         'phone:gallery',
+        'phone:world-runtime-v1',
       ]) {
         window.localStorage.removeItem(key);
       }
