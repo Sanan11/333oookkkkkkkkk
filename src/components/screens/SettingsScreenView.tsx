@@ -759,6 +759,12 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                 <span>角色主动消息 / 邀约调度</span>
                 <button onClick={() => update('proactiveMessagesEnabled', !settings.proactiveMessagesEnabled)} className="font-mono text-[#8b7560]">{settings.proactiveMessagesEnabled ? 'ON' : 'OFF'}</button>
               </div>
+              <label className="block mt-2.5 text-[8px] text-[#8b8782]">主动消息模型
+                <input value={settings.proactiveModel} onChange={e => update('proactiveModel', e.target.value)} placeholder="留空 = 跟随聊天模型" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[9px] font-mono outline-none" />
+              </label>
+              <label className="block mt-2.5 text-[8px] text-[#8b8782]">主动消息 Temperature
+                <input type="number" step="0.05" min="0" max="2" value={settings.proactiveTemperature} onChange={e => update('proactiveTemperature', Math.max(0, Math.min(2, Number(e.target.value) || 0.85)))} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs font-mono outline-none" />
+              </label>
               <div className="mt-2 flex items-center justify-between text-[9px]">
                 <span>心跳间隔</span>
                 <select value={settings.keepAliveMinutes} onChange={e => update('keepAliveMinutes', Number(e.target.value))} className="bg-white/65 rounded-lg px-2 py-1 outline-none text-[9px]">
