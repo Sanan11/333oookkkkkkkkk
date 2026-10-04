@@ -1,5 +1,7 @@
 import type { ImportedCharacter } from '../data/characterImport';
 import type { WorldBook } from '../types';
+import type { CharacterMemory } from '../store/characterMemory';
+import { buildMemoryContext } from '../store/characterMemory';
 
 export interface AiSettings {
   provider: 'gemini' | 'openai-compatible' | 'custom';
@@ -28,6 +30,7 @@ export interface AiReplyInput {
     background?: string;
   } | null;
   worldbooks?: WorldBook[];
+  memory?: CharacterMemory | null;
   messages: Array<{
     sender: 'me' | 'other' | 'system' | string;
     text?: string;
@@ -181,6 +184,8 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
     '',
     input.stylePreset ? '【聊天风格预设】\n' + input.stylePreset : '【聊天风格预设】自然、沉浸、像真实聊天。',
     input.authorNote ? '【作者注释】\n' + input.authorNote : '【作者注释】无。',
+    '',
+    input.memory ? buildMemoryContext(input.memory) : '【长期记忆】当前没有已保存的长期记忆。',
     '',
     worldBook,
     '',
