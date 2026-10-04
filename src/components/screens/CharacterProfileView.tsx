@@ -457,9 +457,6 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
       <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">
         {selectedGroupId === 'all' ? 'CHARACTER ARCHIVE · LOCAL ONLY' : 'CHARACTER GROUP · LOCAL ONLY'}
       </div>
-      <div className="hidden">      <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">
-        CHARACTER ARCHIVE · LOCAL ONLY
-      </div>
 
       {notice && (
         <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-16 bg-[#292724] text-white px-3.5 py-2 rounded-full text-[10px] shadow-lg">
