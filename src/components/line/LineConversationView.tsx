@@ -706,7 +706,7 @@ export function LineConversationView({
           messages: workingMessages,
           userMessage: userText,
           isGroup: true,
-          authorNote: authorsNote,
+          authorNote: [authorsNote, groupNoticeText ? '群公告：' + groupNoticeText : ''].filter(Boolean).join('\\n'),
           stylePreset: activeCotPreset?.title || selectedPreset,
           temperature: Number(presetTemp) || 0.85,
           onDelta: delta => {
