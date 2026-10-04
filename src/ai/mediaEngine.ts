@@ -116,3 +116,44 @@ export async function generateImage(prompt: string, settings: AppSettings): Prom
   }
   throw new Error('IMAGE_EMPTY_RESPONSE');
 }
+
+
+export async function transcribeAudio(
+  audio: Blob,
+  filename: string,
+  settings: AppSettings,
+): Promise<string> {
+  if (!settings.sttEnabled) throw new Error('STT_DISABLED');
+
+  if (settings.sttProvider === 'browser') {
+    throw new Error('STT_BROWSER_REQUIRES_LIVE_MIC');
+  }
+
+  if (!settings.sttApiKey.trim()) throw new Error('STT_API_KEY_MISSING');
+  const endpoint = joinEndpoint(settings.sttBaseUrl, '/audio/transcriptions');
+  const form = new FormData();
+  form.append('file', audio, filename || 'voice.webm');
+  form.append('model', settings.sttModel.trim());
+  if (settings.sttLanguage.trim()) form.append('language', settings.sttLanguage.trim());
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + settings.sttApiKey.trim() },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const error = await readJsonOrText(response);
+    throw new Error('STT_' + response.status + ': ' + (error?.error?.message || error?.message || '语音转文字失败'));
+  }
+
+  const data = await readJsonOrText(response);
+  const text = typeof data?.text === 'string'
+    ? data.text
+    : typeof data?.transcript === 'string'
+    ? data.transcript
+    : '';
+
+  if (!text.trim()) throw new Error('STT_EMPTY_RESPONSE');
+  return text.trim();
+}
