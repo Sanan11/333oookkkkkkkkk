@@ -18,7 +18,8 @@ export type ScreenType =
   | 'spy-phone'
   | 'settings'
   | 'offline-story'
-  | 'project-studio';
+  | 'project-studio'
+  | 'memory';
 
 export interface CharacterGroup {
   id: string;
