@@ -984,6 +984,50 @@ export function LineConversationView({
     }
   };
 
+  const generateRoleOfflineInvite = async () => {
+    if (!importedCharacter) {
+      showToast('当前聊天没有绑定角色，无法生成角色邀约');
+      return;
+    }
+    showToast('AI 正在根据当前角色与聊天生成邀约……');
+    try {
+      const inviteResult = await generateCreativeText({
+        settings: readStoredAiSettings(importedCharacter.id, importedCharacter.name),
+        systemPrompt: [
+          '你正在为当前角色设计一张线下见面邀约卡。',
+          '只能扮演当前角色，不要替用户行动或说话。',
+          '必须根据角色卡、长期记忆、当前聊天记录与世界书生成自然的真实邀约。',
+          '地点、时间、主题必须结合当前情境，不得使用固定示例。',
+          '不要提 AI、模型或提示词。',
+          '严格输出 JSON。',
+        ].join('\n'),
+        userPrompt: [
+          '【角色】' + importedCharacter.name,
+          '【角色描述】' + importedCharacter.description,
+          '【性格】' + importedCharacter.personality,
+          '【角色设定】' + importedCharacter.scenario,
+          '【关系档案】' + characterProfile.relationship + ' / ' + (characterProfile.bio || ''),
+          '【长期记忆】' + (characterMemory.summary || '暂无'),
+          '【世界书】' + (worldbooks.flatMap(book => book.enabled ? book.entries.filter(entry => entry.enabled).map(entry => entry.name + ': ' + entry.content) : []).join('\n') || '暂无'),
+          '【最近聊天】' + messages.slice(-12).map(message => (message.sender === 'me' ? '我' : (message.senderName || importedCharacter.name)) + ': ' + (message.text || '')).join('\n'),
+          '请输出 JSON：{"location":"地点","time":"时间","theme":"邀约主题","letter":"角色写给用户的邀约正文"}',
+        ].join('\n\n'),
+        temperature: 0.9,
+      });
+      const cleaned = inviteResult.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      const parsed = JSON.parse(cleaned);
+      setOfflineInviteData({
+        location: typeof parsed.location === 'string' ? parsed.location : '',
+        time: typeof parsed.time === 'string' ? parsed.time : '',
+        theme: typeof parsed.theme === 'string' ? parsed.theme : '',
+        letter: typeof parsed.letter === 'string' ? parsed.letter : '',
+        inviteFrom: 'other',
+      });
+      showToast('角色已经写好了一封邀约 ✦');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '生成角色邀约失败');
+    }
+  };
   // 发起线下邀约 (Offline Meetup Invite)
   const handleSendOfflineInvite = (from: 'me' | 'other') => {
     const inviteId = String(Date.now());
@@ -4749,49 +4793,9 @@ export function LineConversationView({
                     <button
                       key={mode.id}
                       onClick={() => {
-                        if (mode.id === 'ai-prompt') {
-                          showToast('AI 正在根据当前聊天与角色资料生成邀约……');
-                          void (async () => {
-                            try {
-                              if (!importedCharacter) {
-                                showToast('当前聊天没有绑定角色，无法生成角色邀约');
-                                return;
-                              }
-                              const inviteResult = await generateCreativeText({
-                                settings: readStoredAiSettings(importedCharacter.id, importedCharacter.name),
-                                systemPrompt: [
-                                  '你正在为当前角色设计一张线下见面邀约卡。',
-                                  '只能扮演当前角色，不要替用户行动或说话。',
-                                  '必须根据角色卡、长期记忆、当前聊天记录与世界书生成自然的真实邀约。',
-                                  '不要使用固定地点、固定时间、固定句子，不要提 AI、模型或提示词。',
-                                  '严格输出 JSON。',
-                                ].join('\n'),
-                                userPrompt: [
-                                  '【角色】' + importedCharacter.name,
-                                  '【角色描述】' + importedCharacter.description,
-                                  '【性格】' + importedCharacter.personality,
-                                  '【情境】' + characterProfile.relationship + ' / ' + (characterProfile.bio || ''),
-                                  '【长期记忆】' + (characterMemory.summary || '暂无'),
-                                  '【世界书】' + (worldbooks.flatMap(book => book.enabled ? book.entries.filter(entry => entry.enabled).map(entry => entry.name + ': ' + entry.content) : []).join('\n') || '暂无'),
-                                  '【最近聊天】' + messages.slice(-12).map(message => (message.sender === 'me' ? '我' : (message.senderName || importedCharacter.name)) + ': ' + (message.text || '')).join('\n'),
-                                  '请输出 JSON：{"location":"地点","time":"时间","theme":"邀约主题","letter":"角色写给用户的邀约正文"}',
-                                ].join('\n\n'),
-                                temperature: 0.9,
-                              });
-                              const cleaned = inviteResult.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
-                              const parsed = JSON.parse(cleaned);
-                              setOfflineInviteData({
-                                location: typeof parsed.location === 'string' ? parsed.location : '',
-                                time: typeof parsed.time === 'string' ? parsed.time : '',
-                                theme: typeof parsed.theme === 'string' ? parsed.theme : '',
-                                letter: typeof parsed.letter === 'string' ? parsed.letter : '',
-                                inviteFrom: 'other',
-                              });
-                              showToast('已根据当前聊天气氛生成角色邀约 ✦');
-                            } catch (error) {
-                              showToast(error instanceof Error ? error.message : '生成邀约失败');
-                            }
-                          })();                        } else {
+                        if (mode.id === 'other' || mode.id === 'ai-prompt') {
+                          void generateRoleOfflineInvite();
+                        } else {
                           setOfflineInviteData({
                             ...offlineInviteData,
                             inviteFrom: mode.id as any,
