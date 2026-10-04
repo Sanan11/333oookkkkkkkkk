@@ -206,21 +206,8 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     });
   }, [importedCharacters]);
 
-  // Global Favorites storage
-  const [globalFavorites, setGlobalFavorites] = usePersistentState('line:global-favorites', [
-    {
-      id: 1,
-      contactName: '顾言',
-      text: '那就先休息一会儿。\n不急着做别的。',
-      time: '20:33',
-    },
-    {
-      id: 2,
-      contactName: '小夏',
-      text: '今天的风很舒服，好像什么都不用急着做。',
-      time: '18:42',
-    },
-  ]);
+  // Global Favorites start empty; favorites are created by the user.
+  const [globalFavorites, setGlobalFavorites] = usePersistentState<any[]>('line:global-favorites', []);
 
   // Friends Data
   const [friendsList, setFriendsList] = usePersistentState<LineFriend[]>('line:friends-list', []);
