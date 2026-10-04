@@ -12,6 +12,7 @@ export type ScreenType =
   | 'notes'
   | 'calendar'
   | 'npc'
+  | 'group-presets'
   | 'world-book'
   | 'threads'
   | 'spy-phone'
