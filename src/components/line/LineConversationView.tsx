@@ -141,16 +141,7 @@ export function LineConversationView({
   const [isTyping, setIsTyping] = useState(false);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<number[]>([]);
-  const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${conversationStorageId}`, [
-    ...(hasImportedCharacter ? [] : [{
-      id: 101,
-      contactName: contactName || '顾言',
-      sender: 'other',
-      text: '那就先休息一会儿。\n不急着做别的。',
-      time: '20:33',
-      savedAt: '今天 20:35'
-    }])
-  ]);
+  const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${conversationStorageId}`, []);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const [showQuickPhrases, setShowQuickPhrases] = useState(false);
   const [quickPhrases, setQuickPhrases] = usePersistentState('line:quick-phrases', [
@@ -171,39 +162,8 @@ export function LineConversationView({
 
   // 我的人设管理器 (User Persona Manager)
   const [showPersonaManager, setShowPersonaManager] = useState(false);
-  const [userPersonas, setUserPersonas] = usePersistentState('line:user-personas', [
-    {
-      id: 'p1',
-      name: 'Coral',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-      identity: '摄影杂志初级编辑',
-      gender: '女',
-      traits: '容易心软、偏爱甜食与雨天旧书、嘴硬心软',
-      background: '大学时期与他在老街旧书店相遇，多年来保持着心照不宣的默契。',
-      isDefault: true,
-    },
-    {
-      id: 'p2',
-      name: '林夏',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      identity: '自由插画师 · 策展人',
-      gender: '女',
-      traits: '清冷自律、偶尔毒舌、洞察力极强',
-      background: '高中时曾是他隔壁班的同桌兼画室对手，重逢后关系微妙。',
-      isDefault: false,
-    },
-    {
-      id: 'p3',
-      name: '苏念',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
-      identity: '法学院研究生',
-      gender: '女',
-      traits: '温和沉着、条理清晰、偏爱黑巧与古典乐',
-      background: '他的家族世交妹妹，从小一起长大却久别重逢。',
-      isDefault: false,
-    }
-  ]);
-  const [activePersonaId, setActivePersonaId] = usePersistentState('line:active-persona', 'p1');
+  const [userPersonas, setUserPersonas] = usePersistentState<any[]>('line:user-personas', []);
+  const [activePersonaId, setActivePersonaId] = usePersistentState<string | null>('line:active-persona', null);
   const activePersona = userPersonas.find(p => p.id === activePersonaId) || userPersonas[0];
   const [showNewPersonaModal, setShowNewPersonaModal] = useState(false);
   const [newPersonaData, setNewPersonaData] = useState({
@@ -254,36 +214,7 @@ export function LineConversationView({
   );
 
   // 酒馆世界书条目库 (Lorebook Entries)
-  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${conversationStorageId}`, hasImportedCharacter ? [] : [
-    {
-      id: 'lb1',
-      title: '《东京雨夜日常·核心世界书》',
-      entriesCount: 8,
-      keywords: '便利店, 下雨, 咖啡馆, 散步, 雨伞',
-      active: true,
-    },
-    {
-      id: 'lb2',
-      title: '《近代独栋公馆·世界观设定》',
-      entriesCount: 14,
-      keywords: '书房, 怀表, 羊毛毯, 壁炉, 钢琴',
-      active: false,
-    },
-    {
-      id: 'lb3',
-      title: '《大学校园夏日青涩回忆录》',
-      entriesCount: 6,
-      keywords: '旧书店, 自习室, 自行车, 冰镇汽水',
-      active: false,
-    },
-    {
-      id: 'lb4',
-      title: '《跨国远程生活与时差条目》',
-      entriesCount: 5,
-      keywords: '时差, 航班, 明信片, 机场, 国际长途',
-      active: false,
-    },
-  ]);
+  const [lorebooks, setLorebooks] = usePersistentState<any[]>(`line:lorebooks:${conversationStorageId}`, []);
   const [showLorebookInspector, setShowLorebookInspector] = useState(false);
 
   // 酒馆思维链预设系统 (Chain of Thought Presets)
@@ -377,42 +308,7 @@ export function LineConversationView({
 
   // 角色个人主页 (Threads / Twitter / LINE 混合风格)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false);
-  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${conversationStorageId}`, hasImportedCharacter ? [] : [
-    {
-      id: 'cp1',
-      time: '2小时前',
-      text: '老式胶片机的快门声音总是很沉。今天洗出的那一卷里，有两张光影特别温和。\n想挑一张夹进书里给你。',
-      tag: '#胶卷日常',
-      likes: 42,
-      liked: false,
-      comments: [
-        { user: 'Haruka', text: '洗印技术越来越棒了！' },
-        { user: '你', text: '是上次在公园拍的那卷吗？' },
-      ],
-    },
-    {
-      id: 'cp2',
-      time: '昨天 23:15',
-      text: '又下雨了。下班路上买了两杯热可可。\n雨夜的便利店门口，雾气总让人容易发呆。',
-      tag: '#夜雨',
-      likes: 68,
-      liked: true,
-      comments: [
-        { user: '林夏', text: '某人又在等谁呢。' },
-      ],
-    },
-    {
-      id: 'cp3',
-      time: '3天前',
-      text: '书架最顶层那本绝版摄影集，其实一直替你留着。什么时候有空过来拿？',
-      tag: '#私藏',
-      likes: 89,
-      liked: false,
-      comments: [
-        { user: 'Aki', text: '上次我去问你还说不借呢哈哈！' },
-      ],
-    },
-  ]);
+  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState<any[]>(`line:character-feed:${conversationStorageId}`, []);
 
   // 线下邀约剧情系统 (Offline Meetup System)
   const [showOfflineInviteModal, setShowOfflineInviteModal] = useState(false);
@@ -440,27 +336,15 @@ export function LineConversationView({
   const [profileCommentPostId, setProfileCommentPostId] = useState<string | null>(null);
 
   // 群聊专属设定 (Group Lorebook & Dynamics)
-  const [groupRelationships, setGroupRelationships] = useState([
-    { from: 'Aki', to: 'Haruka', relation: '大学同好 · 偶尔斗嘴' },
-    { from: 'Aki', to: '我', relation: '发小 · 默契满分' },
-    { from: '顾言', to: '我', relation: '暗自守护 · 心动暗涌' },
-    { from: 'Emma', to: '大家', relation: '海外旅行常客 · 热情随性' },
-    { from: '林安', to: '顾言', relation: '老友 · 默契深沉' },
-  ]);
-  const [groupLorebookActive, setGroupLorebookActive] = useState('《东京雨夜日常·核心世界书》');
+  const [groupRelationships, setGroupRelationships] = useState<Array<{ from: string; to: string; relation: string }>>([]);
+  const [groupLorebookActive, setGroupLorebookActive] = useState('');
   const [groupPresetId, setGroupPresetId] = usePersistentState(`line:group-preset:${conversationStorageId}`, 'online-natural');
   const activeGroupPreset = getGroupPreset(groupPresetId, 'online');
-  const [groupNoticeText, setGroupNoticeText] = useState('周末大家聚会，地点定在原宿下北泽唱片咖啡馆，不见不散~');
+  const [groupNoticeText, setGroupNoticeText] = useState('');
 
   // 角色日程
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${conversationStorageId}`, hasImportedCharacter ? [] : [
-    { id: '1', time: '08:30', title: '起床 · 冲手冲咖啡' },
-    { id: '2', time: '12:30', title: '午餐 · 翻阅新寄来的摄影集' },
-    { id: '3', time: '16:00', title: '散步 · 顺路买可颂' },
-    { id: '4', time: '19:00', title: '回家 · 给你发消息' },
-    { id: '5', time: '22:30', title: '夜读 · 听白噪音' },
-  ]);
+  const [scheduleList, setScheduleList] = usePersistentState<any[]>(`line:schedule:${conversationStorageId}`, []);
   const [newScheduleTime, setNewScheduleTime] = useState('21:00');
   const [newScheduleTitle, setNewScheduleTitle] = useState('');
   const [showAddScheduleRow, setShowAddScheduleRow] = useState(false);
