@@ -4650,7 +4650,7 @@ export function LineConversationView({
 
                   {/* Comments Section */}
                   <div className="mt-2 pt-2 border-t border-[#f5f5f7] space-y-2">
-                    {post.comments.map((comment, i) => (
+                    {post.comments.map((comment: { user: string; text: string }, i: number) => (
                       <div key={i} className="text-[11px] leading-snug bg-[#fafafa] p-2 rounded-lg">
                         <span className="font-semibold text-[#555]">{comment.user}: </span>
                         <span className="text-[#333]">{comment.text}</span>
