@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { Download, Plus, Save, Trash2, Upload, Copy, Check } from 'lucide-react';
 import type { CotPreset, CotPresetTarget } from '../../store/cotPresets';
-import { exportCotPresets, importCotPresets, saveCotPresets } from '../../store/cotPresets';
+import { exportCotPresets, importCotPresets, saveCotPresets, getCotAssignments, saveCotAssignment } from '../../store/cotPresets';
 import type { StatusBarPreset, StatusBarTarget } from '../../store/statusBarPresets';
-import { exportStatusBarPresets, importStatusBarPresets, saveStatusBarPresets } from '../../store/statusBarPresets';
+import { exportStatusBarPresets, importStatusBarPresets, saveStatusBarPresets, getStatusBarAssignments, saveStatusBarAssignment } from '../../store/statusBarPresets';
 
 const STATUS_TARGETS: Array<[StatusBarTarget,string]> = [
   ['line','LINE 聊天'], ['offline','线下剧情'], ['character-profile','角色主页'], ['moments','动态 / Moments'], ['threads','Threads'],
@@ -91,6 +91,21 @@ export function PresetResourceManager({
     updateSelected({ targets: targets.includes(target) ? targets.filter(x => x !== target) : [...targets, target] });
   };
 
+  const assignToApp = (target: string) => {
+    if (!selected) return;
+    if (statuses) {
+      saveStatusBarAssignment(target as StatusBarTarget, selected.id);
+      const targets = (selected.targets || []) as StatusBarTarget[];
+      if (!targets.includes(target as StatusBarTarget)) updateSelected({ targets: [...targets, target as StatusBarTarget] });
+      notify(`已指定「${selected.name}」→ ${STATUS_TARGETS.find(x=>x[0]===target)?.[1] || target}`);
+    } else {
+      saveCotAssignment(target as CotPresetTarget, selected.id);
+      const targets = (selected.targets || []) as CotPresetTarget[];
+      if (!targets.includes(target as CotPresetTarget)) updateSelected({ targets: [...targets, target as CotPresetTarget] });
+      notify(`已指定「${selected.title}」→ ${COT_TARGETS.find(x=>x[0]===target)?.[1] || target}`);
+    }
+  };
+
   const exportAll = () => download(statuses ? 'sane333-status-bars.json' : 'sane333-cot-presets.json', statuses ? exportStatusBarPresets(statusPresets) : exportCotPresets(cotPresets));
 
   const importFile = async (file?:File) => {
@@ -171,7 +186,11 @@ export function PresetResourceManager({
                 <div className="flex flex-wrap gap-1.5">
                   {(statuses ? STATUS_TARGETS : COT_TARGETS).map(([id,label]) => {
                     const active=(selected.targets || []).includes(id as any);
-                    return <button key={id} onClick={()=>toggleTarget(id)} className={active ? 'px-2 py-1 rounded-full bg-[#ead5da] text-[#7d5962] text-[8px]' : 'px-2 py-1 rounded-full bg-white border border-[#e8e5e1] text-[#999] text-[8px]'}>{active ? '✓ ' : ''}{label}</button>;
+                    const assigned = statuses ? getStatusBarAssignments()[id as StatusBarTarget] === selected.id : getCotAssignments()[id as CotPresetTarget] === selected.id;
+                    return <div key={id} className="flex items-center gap-1">
+                      <button onClick={()=>toggleTarget(id)} className={active ? 'px-2 py-1 rounded-full bg-[#ead5da] text-[#7d5962] text-[8px]' : 'px-2 py-1 rounded-full bg-white border border-[#e8e5e1] text-[#999] text-[8px]'}>{active ? '✓ ' : ''}{label}</button>
+                      <button onClick={()=>assignToApp(id)} className={assigned ? 'px-1.5 py-1 rounded-full bg-[#292724] text-white text-[7px]' : 'px-1.5 py-1 rounded-full bg-white border border-[#e8e5e1] text-[#aaa] text-[7px]'}>{assigned ? '默认' : '设为'}</button>
+                    </div>;
                   })}
                 </div>
               </div>
