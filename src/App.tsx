@@ -30,14 +30,14 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold tracking-tight text-white font-serif-sc">
-                  小手机 UI 全案设计系统
+                  Sane333 · Private Virtual Phone
                 </h1>
                 <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
                   北欧简约 · IG风 · 模块化插件
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400 hidden md:block">
-                摒弃廉价杂乱拼贴，还原 1:1 模块化高级小组件与全系统架构
+                角色、聊天、世界书、记忆与线下剧情的个人虚拟手机
               </p>
             </div>
           </div>
@@ -156,13 +156,13 @@ export default function App() {
                   onClick={() => setCurrentScreen('chat')}
                   className="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 hover:text-white"
                 >
-                  与 Ethan 聊天 (含语音/思考链)
+                  LINE 对话
                 </button>
                 <button
                   onClick={() => setCurrentScreen('character-profile')}
                   className="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 hover:text-white"
                 >
-                  Ethan 角色档案
+                  角色档案
                 </button>
                 <button
                   onClick={() => setCurrentScreen('moments')}
