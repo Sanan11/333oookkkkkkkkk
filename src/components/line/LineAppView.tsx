@@ -40,6 +40,13 @@ interface LineFriend {
   pinyin: string;
 }
 
+interface LineUserProfile {
+  name: string;
+  id: string;
+  desc: string;
+  avatar?: string;
+}
+
 export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   // Tabs: 'chat' | 'friends' | 'moments' | 'me'
   const [activeTab, setActiveTab] = useState<'chat' | 'friends' | 'moments' | 'me'>('chat');
@@ -87,6 +94,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   const [showGlobalChatSettingsModal, setShowGlobalChatSettingsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showGeneralSettingsModal, setShowGeneralSettingsModal] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
 
   // Notification toggles
   const [notifSound, setNotifSound] = useState(true);
@@ -102,11 +110,13 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   // User / Mask State
   const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
 
-  const [currentUser, setCurrentUser] = usePersistentState('line:current-user', {
+  const [currentUser, setCurrentUser] = usePersistentState<LineUserProfile>('line:current-user', {
     name: '',
     id: '',
     desc: '',
+    avatar: '',
   });
+  const [profileDraft, setProfileDraft] = useState<LineUserProfile>(currentUser);
 
   const [masks, setMasks] = usePersistentState<Array<{ name: string; id: string; desc: string }>>('line:masks', []);
   // Chat Data with Pin, Mute, Draft, and Group capabilities
@@ -661,26 +671,36 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
           </div>
 
           {/* Profile Card */}
-          <div className="p-5 border-b-[7px] border-[#fafafa] flex items-center">
-            <div className="w-[64px] h-[64px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
-              <svg className="w-[39px] h-[39px] text-[#b7b7b9]" viewBox="0 0 48 48" fill="currentColor">
-                <circle cx="24" cy="17" r="8" />
-                <path d="M10 40c1.8-8.1 6.8-12 14-12s12.2 3.9 14 12" />
-              </svg>
-            </div>
+          <div className="p-5 border-b-[7px] border-[#fafafa]">
+            <div className="flex items-center">
+              <div className="w-[64px] h-[64px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
+                {currentUser.avatar ? (
+                  <img src={currentUser.avatar} alt={currentUser.name || '我的头像'} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[20px] text-[#aaa] font-serif">{currentUser.name.trim() ? currentUser.name.trim()[0] : '·'}</span>
+                )}
+              </div>
 
-            <div className="ml-4">
-              <div className="text-[18px] font-semibold text-[#202124]">
-                {currentUser.name}
+              <div className="ml-4 min-w-0 flex-1">
+                <div className="text-[18px] font-semibold text-[#202124] truncate">
+                  {currentUser.name.trim() || '未设置昵称'}
+                </div>
+                <div className="text-[10px] text-[#aaa] mt-1 truncate">
+                  {currentUser.id.trim() ? '@' + currentUser.id.replace(/^@/, '') : '尚未设置账号 ID'}
+                </div>
+                <div className="text-[10px] text-[#888] mt-1.5 line-clamp-2">
+                  {currentUser.desc.trim() || '还没有个人简介'}
+                </div>
               </div>
-              <div className="text-[10px] text-[#aaa] mt-1">
-                账号 ID: {currentUser.id}
-              </div>
+
               <button
-                onClick={() => setShowMaskModal(true)}
-                className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-[#faf1f3] text-[#ae7e89] rounded-[5px] text-[9px] hover:bg-[#f4e6e9] transition-colors cursor-pointer"
+                onClick={() => {
+                  setProfileDraft(currentUser);
+                  setShowProfileEditor(true);
+                }}
+                className="ml-2 shrink-0 px-3 py-1.5 border border-[#dedcdf] rounded-full text-[10px] text-[#444] hover:bg-[#f7f7f8]"
               >
-                ◇ 切换面具
+                编辑主页
               </button>
             </div>
           </div>
@@ -859,6 +879,93 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
       )}
 
       {/* 创建新身份抽屉 */}
+      {showProfileEditor && (
+        <div
+          className="absolute inset-0 z-60 bg-black/25 flex items-end"
+          onClick={() => setShowProfileEditor(false)}
+        >
+          <div
+            className="w-full rounded-t-[26px] bg-white p-5 pb-7 space-y-3 animate-in slide-in-from-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[8px] font-mono tracking-[1.5px] text-[#aaa]">MY PROFILE · PRIVATE</div>
+                <div className="mt-1 font-semibold text-[15px] text-[#222]">编辑我的个人主页</div>
+              </div>
+              <button onClick={() => setShowProfileEditor(false)} className="text-xl text-[#aaa]">×</button>
+            </div>
+
+            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+              <div>
+                <label className="text-[10px] text-[#888]">昵称</label>
+                <input
+                  value={profileDraft.name}
+                  onChange={e => setProfileDraft({ ...profileDraft, name: e.target.value })}
+                  placeholder="你的名字"
+                  className="w-full mt-1 h-10 rounded-xl bg-[#f7f7f8] px-3 text-xs outline-none"
+                />
+              </div>
+              <label className="w-10 h-10 rounded-xl bg-[#f1f1f2] border border-[#e5e5e6] grid place-items-center cursor-pointer overflow-hidden">
+                {profileDraft.avatar ? <img src={profileDraft.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] text-[#999]">头像</span>}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setProfileDraft(prev => ({ ...prev, avatar: String(reader.result || '') }));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[#888]">账号 ID</label>
+              <input
+                value={profileDraft.id}
+                onChange={e => setProfileDraft({ ...profileDraft, id: e.target.value })}
+                placeholder="例如：my_private_id"
+                className="w-full mt-1 h-10 rounded-xl bg-[#f7f7f8] px-3 text-xs outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[#888]">个人简介</label>
+              <textarea
+                value={profileDraft.desc}
+                onChange={e => setProfileDraft({ ...profileDraft, desc: e.target.value })}
+                placeholder="写一句只属于你的简介……"
+                rows={3}
+                className="w-full mt-1 rounded-xl bg-[#f7f7f8] px-3 py-2.5 text-xs outline-none resize-none"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                const next = {
+                  ...profileDraft,
+                  name: profileDraft.name.trim(),
+                  id: profileDraft.id.trim().replace(/^@/, ''),
+                  desc: profileDraft.desc.trim(),
+                };
+                setCurrentUser(next);
+                localStorage.setItem('line:current-user', JSON.stringify(next));
+                window.dispatchEvent(new CustomEvent('sane333:user-profile-changed'));
+                setShowProfileEditor(false);
+                showToast('个人主页已保存');
+              }}
+              className="w-full py-2.5 rounded-xl bg-[#292724] text-white text-[11px] font-semibold"
+            >
+              保存个人主页
+            </button>
+          </div>
+        </div>
+      )}
+
       {showCreateMaskDrawer && (
         <div
           onClick={() => setShowCreateMaskDrawer(false)}
