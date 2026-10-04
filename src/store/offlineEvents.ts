@@ -1,4 +1,5 @@
 import type { OfflineEvent } from '../types';
+import { syncOfflineEventToWorld } from './worldRuntime';
 
 const STORAGE_KEY = 'phone:offline-events';
 
@@ -28,6 +29,7 @@ export function upsertOfflineEvent(event: OfflineEvent): OfflineEvent {
     ? events.map(item => item.id === event.id ? { ...item, ...event } : item)
     : [event, ...events];
   write(next);
+  if (index < 0 || events[index]?.status !== event.status) syncOfflineEventToWorld(event);
   return event;
 }
 
@@ -40,6 +42,7 @@ export function updateOfflineEvent(
   if (!current) return null;
   const nextEvent = { ...current, ...patch };
   write(events.map(item => item.id === id ? nextEvent : item));
+  if (current.status !== nextEvent.status) syncOfflineEventToWorld(nextEvent);
   return nextEvent;
 }
 
