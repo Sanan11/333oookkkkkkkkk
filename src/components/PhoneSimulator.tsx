@@ -18,6 +18,7 @@ import { CalendarScreenView } from './screens/CalendarScreenView';
 import { NpcScreenView } from './screens/NpcScreenView';
 import { GroupPresetScreenView } from './screens/GroupPresetScreenView';
 import { LineAppView } from './line/LineAppView';
+import { LockScreenView } from './screens/LockScreenView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 import { playAppSound, type AppSoundKind } from '../store/soundManager';
 
@@ -189,9 +190,9 @@ export function PhoneSimulator({
           )}
 
           {currentScreen === 'lock' && (
-            <SaneHomeScreenView
-              onNavigate={setCurrentScreen}
-              onOpenSheet={() => setIsSheetOpen(true)}
+            <LockScreenView
+              themeMode={themeMode}
+              onUnlock={() => setCurrentScreen('home')}
             />
           )}
         </div>
