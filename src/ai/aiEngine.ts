@@ -200,7 +200,7 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
 function buildConversationMessages(input: AiReplyInput) {
   const limit = Math.max(4, Math.min(200, input.settings.contextLength || 24)) * 2;
   const recent = input.messages
-    .filter(message => message.type !== 'system-nudge')
+    .filter(message => message.type !== 'system-nudge' && !message.isRecalled && !message.isRecalledByOther)
     .slice(-limit)
     .map(message => ({
       role: message.sender === 'other' ? 'assistant' : 'user',
@@ -368,7 +368,7 @@ async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
     model: input.settings.model.trim(),
     stream: Boolean(input.settings.streaming),
     temperature: Math.max(0, Math.min(2, input.temperature ?? input.settings.temperature ?? 0.85)),
-    max_tokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
+    max_tokens: Math.max(128, Math.min(12000, Number(input.settings.maxOutputTokens) || 1200)),
     messages: [
       { role: 'system', content: system },
       ...buildConversationMessages(input).map(message => ({
