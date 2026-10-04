@@ -12,6 +12,7 @@ import { ThreadsScreenView } from './screens/ThreadsScreenView';
 import { SpyPhoneScreenView } from './screens/SpyPhoneScreenView';
 import { WorldBookScreenView } from './screens/WorldBookScreenView';
 import { SettingsScreenView } from './screens/SettingsScreenView';
+import { ProjectStudioScreenView } from './screens/ProjectStudioScreenView';
 import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
 import { CalendarScreenView } from './screens/CalendarScreenView';
 import { LineAppView } from './line/LineAppView';
@@ -144,6 +145,10 @@ export function PhoneSimulator({
 
           {currentScreen === 'settings' && (
             <SettingsScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'project-studio' && (
+            <ProjectStudioScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'offline-story' && (
