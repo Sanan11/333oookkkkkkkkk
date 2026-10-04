@@ -51,6 +51,7 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
       if (!text) throw new Error('NPC_EMPTY_COMMENT');
       setPosts(prev => prev.map(item => item.id === post.id ? { ...item, comments: [...(Array.isArray(item.comments) ? item.comments : []), { id: 'npc-comment-' + Date.now().toString(36), user: npc.name, text, kind: 'npc', createdAt: new Date().toISOString() }] } : item));
       notify(npc.name + ' 留下了一条评论 ✦');
+      window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'moments' } }));
     } catch (error) {
       notify(error instanceof Error ? error.message : 'NPC 评论失败');
     } finally {
