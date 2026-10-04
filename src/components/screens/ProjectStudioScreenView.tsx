@@ -1,73 +1,497 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, FileCode2, Folder, Github, KeyRound, Loader2, MessageCircle, RefreshCw, Save, Send, Settings2, Sparkles, Upload, X, Plus, Trash2, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Check, ChevronRight, FileCode2, Folder, Github, KeyRound, Loader2, MessageCircle, Plus, Save, Send, Settings2, ShieldAlert, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import type { ScreenType } from '../../types';
 
-type Tab='chat'|'files'|'changes'|'admin'|'settings';
-type Item={name:string;path:string;type:'file'|'dir';sha?:string};
-type Change={path:string;content:string};
+type Tab = 'chat' | 'files' | 'changes' | 'admin' | 'settings';
+type Item = { name: string; path: string; type: 'file' | 'dir'; sha?: string };
+type Change = { path: string; content: string };
 
-const K={base:'studio:ai-base',key:'studio:ai-key',model:'studio:model',owner:'studio:github-owner',repo:'studio:github-repo',branch:'studio:github-branch',token:'studio:github-token'};
-const get=(k:string,d='')=>typeof window==='undefined'?d:window.localStorage.getItem(k)||d;
-const put=(k:string,v:string)=>window.localStorage.setItem(k,v);
-const api=(base:string)=>{const b=base.trim().replace(/\/+$/,'');if(!b)throw new Error('AI Base URL 未填写');return /\/chat\/completions$/i.test(b)?b:b+'/chat/completions';};
-async function gh(url:string,token:string,init:RequestInit={}){const r=await fetch(url,{...init,headers:{Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28',...(init.headers||{})}});if(!r.ok){let m='';try{m=(await r.json())?.message||''}catch{}throw new Error('GitHub '+r.status+(m?' · '+m:''))}return r.json();}
-function b64(s:string){const x=new TextEncoder().encode(s);let b='';for(let i=0;i<x.length;i+=0x8000)b+=String.fromCharCode(...x.subarray(i,i+0x8000));return btoa(b)}
-function unb64(s:string){const b=atob(s.replace(/\s/g,''));return new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0)))}
+const STORE = {
+  base: 'studio:ai-base',
+  key: 'studio:ai-key',
+  model: 'studio:model',
+  owner: 'studio:github-owner',
+  repo: 'studio:github-repo',
+  branch: 'studio:github-branch',
+  token: 'studio:github-token',
+};
 
-export function ProjectStudioScreenView({onNavigate}:{onNavigate:(screen:ScreenType)=>void}){
- const [tab,setTab]=useState<Tab>('chat'),[base,setBase]=useState(()=>get(K.base,'https://api.openai.com/v1')),[key,setKey]=useState(()=>get(K.key)),[model,setModel]=useState(()=>get(K.model));
- const [owner,setOwner]=useState(()=>get(K.owner,'baekyuko3-sys')),[repo,setRepo]=useState(()=>get(K.repo,'333oookkkkkkkkk')),[branch,setBranch]=useState(()=>get(K.branch,'main')),[token,setToken]=useState(()=>get(K.token));
- const [items,setItems]=useState<Item[]>([]),[path,setPath]=useState(''),[file,setFile]=useState<Item|null>(null),[code,setCode]=useState(''),[original,setOriginal]=useState('');
- const [busy,setBusy]=useState(false),[saving,setSaving]=useState(false),[aiBusy,setAiBusy]=useState(false),[notice,setNotice]=useState(''),[prompt,setPrompt]=useState('');
- const [messages,setMessages]=useState<{role:'user'|'assistant';text:string}[]>([{role:'assistant',text:'hey ✦ 我是 Studio。你说要改什么，我就陪你一起看代码。'}]);
- const [changes,setChanges]=useState<Change[]>([]),[newPath,setNewPath]=useState(''),[newContent,setNewContent]=useState(''),[deletePath,setDeletePath]=useState('');
- const ready=!!(owner&&repo&&token),dirty=!!file&&code!==original;
- const note=(s:string)=>{setNotice(s);setTimeout(()=>setNotice(''),2200)};
- const saveSettings=()=>{put(K.base,base);put(K.key,key);put(K.model,model);put(K.owner,owner);put(K.repo,repo);put(K.branch,branch);put(K.token,token);note('设置已保存')};
- const list=async(p='')=>{if(!ready){setTab('settings');note('先连接 GitHub');return}setBusy(true);try{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+p.split('/').filter(Boolean).map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(branch);const d=await gh(u,token);const a=Array.isArray(d)?d:[d];setItems(a.map((x:any)=>({name:x.name,path:x.path,type:x.type==='dir'?'dir':'file',sha:x.sha})));setPath(p)}catch(e){note(e instanceof Error?e.message:'读取失败')}finally{setBusy(false)}};
- const open=async(x:Item)=>{if(x.type==='dir'){await list(x.path);return}setBusy(true);try{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+x.path.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(branch);const d=await gh(u,token);const c=unb64(d.content||'');setFile(x);setCode(c);setOriginal(c);setTab('files')}catch(e){note(e instanceof Error?e.message:'打开失败')}finally{setBusy(false)}};
- const saveFile=async()=>{if(!file)return;setSaving(true);try{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+file.path.split('/').map(encodeURIComponent).join('/');const old=await gh(u+'?ref='+encodeURIComponent(branch),token);await gh(u,token,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'feat(studio): edit '+file.path,content:b64(code),branch,sha:old.sha})});setOriginal(code);setChanges(c=>c.filter(x=>x.path!==file.path));note('已保存到 GitHub ✓')}catch(e){note(e instanceof Error?e.message:'保存失败')}finally{setSaving(false)}};
- const createFile=async()=>{const p=newPath.trim().replace(/^\/+|\/+$/g,'');if(!p){note('先填写文件路径');return}setSaving(true);try{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+p.split('/').map(encodeURIComponent).join('/');await gh(u,token,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'feat(studio): create '+p,content:b64(newContent),branch})});setNewPath('');setNewContent('');note('文件已创建 ✓');await list(path)}catch(e){note(e instanceof Error?e.message:'创建失败')}finally{setSaving(false)}};
- const deleteOne=async(p:string)=>{if(!p)return;setSaving(true);try{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+p.split('/').map(encodeURIComponent).join('/');const old=await gh(u+'?ref='+encodeURIComponent(branch),token);await gh(u,token,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'chore(studio): delete '+p,sha:old.sha,branch})});if(file?.path===p){setFile(null);setCode('');setOriginal('')}setDeletePath('');note('已删除：'+p);await list(path)}catch(e){note(e instanceof Error?e.message:'删除失败')}finally{setSaving(false)}};
- const deleteTree=async(root:string)=>{const p=root.trim().replace(/^\/+|\/+$/g,'');if(!p){note('先填写目录或 App 路径');return}if(!ready){note('先连接 GitHub');return}setSaving(true);try{const walk=async(dir:string):Promise<any[]>=>{const u='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+dir.split('/').filter(Boolean).map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(branch);const d=await gh(u,token);const a=Array.isArray(d)?d:[d];const out:any[]=[];for(const x of a){if(x.type==='dir')out.push(...await walk(x.path));else out.push(x)}return out};const files=await walk(p);for(const x of files){await gh('https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+x.path.split('/').map(encodeURIComponent).join('/'),token,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'chore(studio): remove '+p,sha:x.sha,branch})})}setDeletePath('');setFile(null);setCode('');setOriginal('');note('App / 目录已删除：'+p);await list('')}catch(e){note(e instanceof Error?e.message:'删除失败')}finally{setSaving(false)}};
-  const ask=async()=>{const q=prompt.trim();if(!q||aiBusy)return;if(!key||!model){setTab('settings');note('请先填写 AI API Key / Model');return}setAiBusy(true);setPrompt('');setMessages(m=>[...m,{role:'user',text:q}]);try{const context=file?`\n【当前文件】${file.path}\n${code.slice(0,28000)}`:'';const system='你是 MEME Studio 的代码助手。语气可爱活泼，但技术上严谨。只做最小必要修改，不删除现有功能。若用户要求改代码，严格返回 JSON：'+JSON.stringify({reply:'简短说明',filePath:'文件路径',content:'完整修改后文件内容'});const r=await fetch(api(base),{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,stream:false,temperature:.2,messages:[{role:'system',content:system+context},...messages.slice(-6).map(x=>({role:x.role,content:x.text})),{role:'user',content:q}]})});if(!r.ok)throw new Error('AI '+r.status+' · '+(await r.text()).slice(0,180));const d=await r.json(),raw=String(d?.choices?.[0]?.message?.content||'');let p:any=null;try{p=JSON.parse(raw.replace(/^\`{3}(?:json)?\s*/i,'').replace(/\s*\`{3}$/,''))}catch{}const reply=p?.reply||raw||'AI 没有返回内容。';setMessages(m=>[...m,{role:'assistant',text:reply}]);if(p?.filePath&&p?.content){setChanges(c=>[...c.filter(x=>x.path!==p.filePath),{path:p.filePath,content:p.content}]);note('AI 修改已放进 Changes ✦')}}catch(e){setMessages(m=>[...m,{role:'assistant',text:'这次没成功：'+(e instanceof Error?e.message:'请求失败')}])}finally{setAiBusy(false)}};
- useEffect(()=>{if(ready)void list('')},[]);
- return <div className="relative w-full h-full overflow-hidden" style={{background:'var(--paper)',color:'var(--ink)'}}>
-  <header className="pt-11 px-4 pb-3 border-b border-black/10 bg-[#f7f4ee]/92 backdrop-blur-xl"><div className="flex items-center gap-2.5"><button onClick={()=>onNavigate('home')} className="w-8 h-8 rounded-full bg-white/70 grid place-items-center"><ArrowLeft className="w-4 h-4"/></button><div className="flex-1"><div className="text-[8px] font-mono tracking-[2px] text-[#8b8782]">MEME · DEVELOPMENT STUDIO</div><div className="flex items-center gap-1.5"><b className="text-[18px]">Studio</b><span className="text-[7px] px-1.5 py-0.5 rounded-full bg-[#292724] text-white">{ready?'GITHUB READY':'LOCAL MODE'}</span></div></div><button onClick={()=>setTab('settings')} className="w-8 h-8 rounded-full bg-white/70 grid place-items-center"><Settings2 className="w-4 h-4"/></button></div><div className="mt-2 text-[8px] font-mono text-[#8b8782] flex justify-between"><span>{owner} / {repo}</span><span>{branch}</span></div></header>
-  <div className="h-[calc(100%-100px)] overflow-y-auto no-scrollbar pb-16">
-   {tab==='chat'&&<section className="p-3.5 space-y-3"><div className="p-3.5 rounded-2xl bg-[#ebe6de] border border-black/5"><div className="flex gap-2 items-center"><div className="w-9 h-9 rounded-[13px] bg-[#292724] text-white grid place-items-center"><Sparkles className="w-4 h-4"/></div><div><b className="text-[12px]">hey, let's build ✦</b><div className="text-[9px] text-[#7c756e]">AI + GitHub · 在小手机里改代码</div></div></div><div className="grid grid-cols-3 gap-1.5 mt-3"><button onClick={()=>setPrompt('检查当前文件的问题并给最小修复方案')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">检查代码</button><button onClick={()=>setPrompt('把当前页面做得更高级、更干净，不删除已有功能')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">优化 UI</button><button onClick={()=>setPrompt('帮我找可能的构建错误')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">找 Bug</button></div></div>{messages.map((m,i)=><div key={i} className={m.role==='user'?'ml-8 p-2.5 rounded-2xl bg-[#292724] text-white text-[10px]':'mr-5 p-2.5 rounded-2xl bg-white/70 border border-black/5 text-[10px]'}><div className="text-[8px] font-mono opacity-50 mb-1">{m.role==='user'?'YOU':'MEME AI'}</div><div className="whitespace-pre-wrap break-words">{m.text}</div></div>)}</section>}
-   {tab==='files'&&<section className="p-3.5 space-y-2.5"><div className="flex justify-between items-center"><button onClick={()=>list(path.includes('/')?path.split('/').slice(0,-1).join('/'):'')} className="text-[9px] flex items-center gap-1"><ArrowLeft className="w-3 h-3"/>{path||'ROOT'}</button><button onClick={()=>list(path)}><RefreshCw className="w-3 h-3"/></button></div>{file&&<div className="rounded-2xl overflow-hidden bg-[#1f1e1c] text-[#eee]"><div className="p-2.5 border-b border-white/10 flex justify-between text-[9px] font-mono"><span className="truncate">{file.path}</span><button onClick={()=>setFile(null)}><X className="w-3 h-3"/></button></div><textarea value={code} onChange={e=>setCode(e.target.value)} spellCheck={false} className="w-full h-[310px] bg-transparent p-3 text-[8px] leading-[1.55] font-mono outline-none resize-none"/><div className="p-2 border-t border-white/10"><button disabled={!dirty||saving} onClick={saveFile} className="w-full py-2 rounded-lg bg-white text-[#292724] text-[9px] disabled:opacity-30"><Save className="w-3 h-3 inline mr-1"/>{saving?'保存中…':'保存到 GitHub'}</button></div></div>}<div className="rounded-2xl bg-white/60 overflow-hidden">{busy?<div className="p-6 text-center text-[9px] text-[#888]"><Loader2 className="w-4 h-4 mx-auto animate-spin"/></div>:items.map(x=><button key={x.path} onClick={()=>open(x)} className="w-full p-2.5 flex gap-2 items-center border-b border-black/5 text-left"><span>{x.type==='dir'?<Folder className="w-3.5 h-3.5 text-[#9b8068]"/>:<FileCode2 className="w-3.5 h-3.5"/></span><span className="flex-1 text-[9px] truncate">{x.name}</span><ChevronRight className="w-3 h-3 text-[#aaa]"/></button>)}</div></section>}
-   {tab==='changes'&&(
-    <section className="p-3.5 space-y-2.5">
-      <div className="p-3 rounded-2xl bg-[#ebe6de] text-[9px]">
-        <b>Changes</b>
-        <div className="mt-1 text-[#777069]">AI 的修改先在这里预览，不会自动写 GitHub。</div>
-      </div>
-      {changes.map(change=>(
-        <div key={change.path} className="p-3 rounded-2xl bg-white/65 border border-black/5">
-          <div className="text-[9px] font-mono truncate">{change.path}</div>
-          <pre className="mt-2 max-h-28 overflow-hidden rounded-xl bg-[#252422] text-[#ddd] p-2 text-[7px] whitespace-pre-wrap">{change.content.slice(0,1000)}</pre>
-          <button
-            onClick={()=>{
-              setFile({name:change.path.split('/').pop()||change.path,path:change.path,type:'file'});
-              setCode(change.content);
-              setOriginal('');
-              setTab('files');
-            }}
-            className="mt-2 w-full py-2 rounded-lg bg-[#292724] text-white text-[9px]"
-          >
-            载入编辑器
+function readStore(key: string, fallback = '') {
+  if (typeof window === 'undefined') return fallback;
+  return window.localStorage.getItem(key) || fallback;
+}
+
+function writeStore(key: string, value: string) {
+  if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+}
+
+function aiUrl(base: string) {
+  const value = base.trim().replace(/\/+$/, '');
+  if (!value) throw new Error('AI Base URL 未填写');
+  return /\/chat\/completions$/i.test(value) ? value : value + '/chat/completions';
+}
+
+async function github(url: string, token: string, init: RequestInit = {}) {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: 'Bearer ' + token,
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(init.headers || {}),
+    },
+  });
+  if (!response.ok) {
+    let message = '';
+    try {
+      const data = await response.json();
+      message = data?.message || '';
+    } catch {}
+    throw new Error('GitHub ' + response.status + (message ? ' · ' + message : ''));
+  }
+  return response.json();
+}
+
+function encodeBase64(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function decodeBase64(value: string) {
+  const binary = atob(value.replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
+}
+
+export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: ScreenType) => void }) {
+  const [tab, setTab] = useState<Tab>('chat');
+  const [base, setBase] = useState(() => readStore(STORE.base, 'https://api.openai.com/v1'));
+  const [key, setKey] = useState(() => readStore(STORE.key));
+  const [model, setModel] = useState(() => readStore(STORE.model));
+  const [owner, setOwner] = useState(() => readStore(STORE.owner, 'baekyuko3-sys'));
+  const [repo, setRepo] = useState(() => readStore(STORE.repo, '333oookkkkkkkkk'));
+  const [branch, setBranch] = useState(() => readStore(STORE.branch, 'main'));
+  const [token, setToken] = useState(() => readStore(STORE.token));
+
+  const [items, setItems] = useState<Item[]>([]);
+  const [path, setPath] = useState('');
+  const [file, setFile] = useState<Item | null>(null);
+  const [code, setCode] = useState('');
+  const [original, setOriginal] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [message, setMessage] = useState('hey ✦ 我是 Studio。你告诉我想改什么，我们一起改这个小手机。');
+  const [changes, setChanges] = useState<Change[]>([]);
+  const [newPath, setNewPath] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [deletePath, setDeletePath] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const ready = Boolean(owner.trim() && repo.trim() && branch.trim() && token.trim());
+  const dirty = Boolean(file && code !== original);
+
+  const notify = (text: string) => {
+    setNotice(text);
+    window.setTimeout(() => setNotice(''), 2400);
+  };
+
+  const saveSettings = () => {
+    writeStore(STORE.base, base);
+    writeStore(STORE.key, key);
+    writeStore(STORE.model, model);
+    writeStore(STORE.owner, owner);
+    writeStore(STORE.repo, repo);
+    writeStore(STORE.branch, branch);
+    writeStore(STORE.token, token);
+    notify('Studio 设置已保存');
+  };
+
+  const list = async (folder = '') => {
+    if (!ready) {
+      setTab('settings');
+      notify('先在 Settings 连接 GitHub');
+      return;
+    }
+    setBusy(true);
+    try {
+      const clean = folder.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + clean + '?ref=' + encodeURIComponent(branch);
+      const data = await github(url, token);
+      const array = Array.isArray(data) ? data : [data];
+      setItems(array.map((item: any) => ({
+        name: item.name,
+        path: item.path,
+        type: item.type === 'dir' ? 'dir' : 'file',
+        sha: item.sha,
+      })));
+      setPath(folder);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '读取 GitHub 失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const open = async (item: Item) => {
+    if (item.type === 'dir') {
+      await list(item.path);
+      return;
+    }
+    if (!ready) return;
+    setBusy(true);
+    try {
+      const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + item.path.split('/').map(encodeURIComponent).join('/') + '?ref=' + encodeURIComponent(branch);
+      const data = await github(url, token);
+      setFile(item);
+      setCode(decodeBase64(data.content));
+      setOriginal(decodeBase64(data.content));
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '读取文件失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveFile = async () => {
+    if (!file || !ready) return;
+    setSaving(true);
+    try {
+      const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + file.path.split('/').map(encodeURIComponent).join('/');
+      await github(url, token, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Studio: update ' + file.path,
+          content: encodeBase64(code),
+          sha: file.sha,
+          branch,
+        }),
+      });
+      setOriginal(code);
+      await list(path);
+      notify('已保存到 GitHub');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ask = async () => {
+    if (!prompt.trim()) return;
+    if (!key.trim() || !model.trim()) {
+      setTab('settings');
+      notify('先填写 AI API Key 和 Model');
+      return;
+    }
+    const request = prompt.trim();
+    setPrompt('');
+    setMessage('你：' + request);
+    setAiBusy(true);
+    try {
+      const context = file ? '\n当前文件：' + file.path + '\n\n' + code.slice(0, 50000) : '';
+      const response = await fetch(aiUrl(base), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + key,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: '你是小手机项目 Studio 的代码助手。先分析问题。需要修改代码时，只输出 JSON：{"reply":"简短说明","filePath":"文件路径","content":"完整新文件内容"}。不需要修改时输出 JSON：{"reply":"说明"}。不要输出 Markdown。',
+            },
+            { role: 'user', content: request + context },
+          ],
+          temperature: 0.2,
+        }),
+      });
+      if (!response.ok) throw new Error('AI API ' + response.status);
+      const data = await response.json();
+      const raw = data?.choices?.[0]?.message?.content || '';
+      let parsed: any = null;
+      try { parsed = JSON.parse(raw); } catch {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) {
+          try { parsed = JSON.parse(match[0]); } catch {}
+        }
+      }
+      if (!parsed) {
+        setMessage(raw || 'AI 没有返回内容');
+        return;
+      }
+      setMessage(parsed.reply || 'AI 已完成分析。');
+      if (parsed.filePath && typeof parsed.content === 'string') {
+        setChanges(previous => [
+          ...previous.filter(change => change.path !== parsed.filePath),
+          { path: parsed.filePath, content: parsed.content },
+        ]);
+        setTab('changes');
+        notify('AI 修改草案已放进 Changes');
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'AI 请求失败');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const createFile = async () => {
+    const target = newPath.trim().replace(/^\/+|\/+$/g, '');
+    if (!target || !ready) return;
+    setSaving(true);
+    try {
+      const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + target.split('/').map(encodeURIComponent).join('/');
+      await github(url, token, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Studio: create ' + target, content: encodeBase64(newContent), branch }),
+      });
+      setNewPath('');
+      setNewContent('');
+      await list(path);
+      notify('文件已创建');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '创建失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteFile = async (targetPath: string) => {
+    if (!ready || !targetPath.trim()) return;
+    setSaving(true);
+    try {
+      const target = targetPath.trim().replace(/^\/+|\/+$/g, '');
+      const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + target.split('/').map(encodeURIComponent).join('/') + '?ref=' + encodeURIComponent(branch);
+      const data = await github(url, token);
+      if (Array.isArray(data)) throw new Error('这是目录，请使用递归删除');
+      await github(url.split('?')[0], token, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Studio: delete ' + target, sha: data.sha, branch }),
+      });
+      await list(path);
+      notify('文件已删除');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '删除失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteTree = async (root: string): Promise<void> => {
+    const target = root.trim().replace(/^\/+|\/+$/g, '');
+    if (!target || !ready) return;
+    const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' + target.split('/').map(encodeURIComponent).join('/') + '?ref=' + encodeURIComponent(branch);
+    const data = await github(url, token);
+    if (!Array.isArray(data)) {
+      await github(url.split('?')[0], token, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Studio: delete ' + target, sha: data.sha, branch }),
+      });
+      return;
+    }
+    for (const item of data) {
+      await deleteTree(item.path);
+    }
+  };
+
+  const removeTree = async () => {
+    if (!deletePath.trim() || !ready) return;
+    if (!window.confirm('确定递归删除这个 App / 目录吗？GitHub 上的文件会被删除。')) return;
+    setSaving(true);
+    try {
+      await deleteTree(deletePath);
+      await list(path);
+      setDeletePath('');
+      notify('目录已删除');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '删除目录失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const tabButton = (value: Tab, label: string, Icon: any) => (
+    <button
+      onClick={() => setTab(value)}
+      className={tab === value ? 'py-2 rounded-xl bg-[#292724] text-white text-[8px]' : 'py-2 text-[#777069] text-[8px]'}
+    >
+      <Icon className="w-3.5 h-3.5 mx-auto" />
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="relative w-full h-full overflow-hidden" style={{ background: 'var(--paper)', color: 'var(--ink)' }}>
+      <header className="pt-11 px-4 pb-3 border-b border-black/10 bg-[#f7f4ee]/95">
+        <div className="flex items-center gap-2.5">
+          <button onClick={() => onNavigate('home')} className="w-8 h-8 rounded-full bg-white/70 grid place-items-center">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="flex-1">
+            <div className="text-[8px] font-mono tracking-[2px] text-[#8b8782]">MEME · DEVELOPMENT STUDIO</div>
+            <div className="flex items-center gap-1.5">
+              <b className="text-[18px]">Studio</b>
+              <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-[#292724] text-white">{ready ? 'GITHUB READY' : 'LOCAL MODE'}</span>
+            </div>
+          </div>
+          <button onClick={() => setTab('settings')} className="w-8 h-8 rounded-full bg-white/70 grid place-items-center">
+            <Settings2 className="w-4 h-4" />
           </button>
         </div>
-      ))}
-      {!changes.length&&<div className="py-12 text-center text-[9px] text-[#888]">暂无 AI 修改草案。</div>}
-    </section>
-   )}
-   {tab==='admin'&&<section className="p-3.5 space-y-2.5"><div className="p-3.5 rounded-2xl bg-[#ebe6de] border border-black/5"><div className="flex items-center gap-2"><ShieldAlert className="w-4 h-4"/><b>Studio Admin</b></div><div className="mt-1 text-[#777069]">这里给 Studio 完整项目维护权限：创建、修改、删除文件，也可以递归删除一个 App / 目录。</div></div><div className="p-3 rounded-2xl bg-white/60 space-y-2"><div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">CREATE FILE</div><input value={newPath} onChange={e=>setNewPath(e.target.value)} placeholder="例如 src/components/screens/MyApp.tsx" className="w-full p-2.5 rounded-xl text-[9px] outline-none"/><textarea value={newContent} onChange={e=>setNewContent(e.target.value)} placeholder="文件内容" className="w-full h-28 p-2.5 rounded-xl text-[8px] font-mono outline-none resize-none"/><button disabled={saving} onClick={()=>void createFile()} className="w-full py-2.5 rounded-xl bg-[#292724] text-white text-[9px]"><Plus className="w-3 h-3 inline mr-1"/>{saving?'处理中…':'创建文件'}</button></div><div className="p-3 rounded-2xl bg-white/60 space-y-2"><div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">DELETE FILE</div><input value={deletePath} onChange={e=>setDeletePath(e.target.value)} placeholder="输入要删除的文件路径" className="w-full p-2.5 rounded-xl text-[9px] outline-none"/><button disabled={saving||!deletePath.trim()} onClick={()=>void deleteOne(deletePath.trim())} className="w-full py-2.5 rounded-xl bg-[#8d4e4e] text-white text-[9px]"><Trash2 className="w-3 h-3 inline mr-1"/>删除文件</button></div><div className="p-3 rounded-2xl bg-[#fff4f1] border border-[#b66a5d]/20 space-y-2"><div className="text-[8px] font-mono tracking-[1.5px] text-[#9b625b]">REMOVE APP / DIRECTORY</div><input value={deletePath} onChange={e=>setDeletePath(e.target.value)} placeholder="例如 src/components/screens/OldApp" className="w-full p-2.5 rounded-xl text-[9px] outline-none"/><button disabled={saving||!deletePath.trim()} onClick={()=>{if(window.confirm('确定递归删除这个 App / 目录吗？GitHub 上的文件会被删除。'))void deleteTree(deletePath.trim())}} className="w-full py-2.5 rounded-xl bg-[#9b625b] text-white text-[9px]"><Trash2 className="w-3 h-3 inline mr-1"/>递归删除 App / 目录</button><div className="text-[8px] leading-relaxed text-[#8f6f68]">这是最高权限操作。Studio 不会替你猜路径，必须由你明确指定。</div></div></section>}
-   {tab==='settings'&&<section className="p-3.5 space-y-2.5"><div className="p-3.5 rounded-2xl bg-[#ebe6de] text-[9px]"><b>Studio Settings</b><div className="mt-1 text-[#777069]">API Key / GitHub Token 仅保存在当前浏览器。</div></div><div className="p-3 rounded-2xl bg-white/60 space-y-2"><div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">AI · OPENAI COMPATIBLE</div><label className="text-[9px] block">API Base URL<input value={base} onChange={e=>setBase(e.target.value)} placeholder="https://api.openai.com/v1" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none"/></label><label className="text-[9px] block">API Key<input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-..." className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none"/></label><label className="text-[9px] block">Model<input value={model} onChange={e=>setModel(e.target.value)} placeholder="模型名称" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none"/></label></div><div className="p-3 rounded-2xl bg-white/60 space-y-2"><div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">GITHUB PROJECT</div><div className="grid grid-cols-2 gap-1.5"><input value={owner} onChange={e=>setOwner(e.target.value)} placeholder="Owner" className="p-2.5 rounded-xl text-[9px] outline-none"/><input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="Repository" className="p-2.5 rounded-xl text-[9px] outline-none"/></div><input value={branch} onChange={e=>setBranch(e.target.value)} placeholder="Branch" className="w-full p-2.5 rounded-xl text-[9px] outline-none"/><input type="password" value={token} onChange={e=>setToken(e.target.value)} placeholder="Fine-grained GitHub Token" className="w-full p-2.5 rounded-xl text-[9px] outline-none"/><div className="text-[8px] leading-relaxed text-[#888]">建议 Token 只开放这个仓库的 Contents 读写权限。</div></div><div className="grid grid-cols-2 gap-1.5"><button onClick={saveSettings} className="py-2.5 rounded-xl bg-[#292724] text-white text-[9px]"><Check className="w-3 h-3 inline mr-1"/>保存</button><button onClick={async()=>{try{const d=await gh('https://api.github.com/user',token);note('GitHub 已连接：'+(d?.login||'OK'));await list('')}catch(e){note(e instanceof Error?e.message:'连接失败')}}} className="py-2.5 rounded-xl bg-white text-[9px]"><Github className="w-3 h-3 inline mr-1"/>测试 GitHub</button></div></section>}
-  </div>
-  {notice&&<div className="absolute z-50 bottom-20 left-4 right-4 p-2.5 rounded-xl bg-[#292724] text-white text-[9px] text-center">{notice}</div>}
-  <div className="absolute bottom-0 left-0 right-0 z-30 px-2 pb-3 pt-2 bg-[#f7f4ee]/95 border-t border-black/10 grid grid-cols-5 gap-1"><button onClick={()=>setTab('chat')} className={tab==='chat'?'py-2 rounded-xl bg-[#292724] text-white text-[8px]':'py-2 text-[#777069] text-[8px]'}><MessageCircle className="w-3.5 h-3.5 mx-auto"/>Chat</button><button onClick={()=>{setTab('files');if(!items.length)void list(path)}} className={tab==='files'?'py-2 rounded-xl bg-[#292724] text-white text-[8px]':'py-2 text-[#777069] text-[8px]'}><FileCode2 className="w-3.5 h-3.5 mx-auto"/>Files</button><button onClick={()=>setTab('changes')} className={tab==='changes'?'py-2 rounded-xl bg-[#292724] text-white text-[8px]':'py-2 text-[#777069] text-[8px]'}><Upload className="w-3.5 h-3.5 mx-auto"/>Changes{changes.length?' · '+changes.length:''}</button><button onClick={()=>setTab('admin')} className={tab==='admin'?'py-2 rounded-xl bg-[#292724] text-white text-[8px]':'py-2 text-[#777069] text-[8px]'}><ShieldAlert className="w-3.5 h-3.5 mx-auto"/>Admin</button><button onClick={()=>setTab('settings')} className={tab==='settings'?'py-2 rounded-xl bg-[#292724] text-white text-[8px]':'py-2 text-[#777069] text-[8px]'}><KeyRound className="w-3.5 h-3.5 mx-auto"/>Settings</button></div>
-  {tab==='chat'&&<div className="absolute z-40 left-3 right-3 bottom-[65px] flex gap-1.5"><input value={prompt} onChange={e=>setPrompt(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void ask()}} placeholder="告诉 MEME 你想改什么…" className="flex-1 p-2.5 rounded-xl bg-white border border-black/10 text-[9px] outline-none"/><button onClick={()=>void ask()} disabled={aiBusy||!prompt.trim()} className="w-10 rounded-xl bg-[#292724] text-white grid place-items-center disabled:opacity-30">{aiBusy?<Loader2 className="w-3.5 h-3.5 animate-spin"/>:<Send className="w-3.5 h-3.5"/>}</button></div>}
- </div>
+        <div className="mt-2 text-[8px] font-mono text-[#8b8782] flex justify-between">
+          <span>{owner} / {repo}</span>
+          <span>{branch}</span>
+        </div>
+      </header>
+
+      <main className="h-[calc(100%-100px)] overflow-y-auto no-scrollbar pb-20">
+        {tab === 'chat' && (
+          <section className="p-3.5 space-y-3">
+            <div className="p-3.5 rounded-2xl bg-[#ebe6de] border border-black/5">
+              <div className="flex gap-2 items-center">
+                <div className="w-9 h-9 rounded-[13px] bg-[#292724] text-white grid place-items-center"><Sparkles className="w-4 h-4" /></div>
+                <div><b className="text-[12px]">hey, let's build ✦</b><div className="text-[9px] text-[#7c756e]">AI + GitHub · 在小手机里改代码</div></div>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 mt-3">
+                <button onClick={() => setPrompt('检查当前项目的问题并给最小修复方案')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">检查代码</button>
+                <button onClick={() => setPrompt('把当前页面做得更高级、更干净，不删除已有功能')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">优化 UI</button>
+                <button onClick={() => setPrompt('帮我找可能的构建错误')} className="p-2 rounded-xl bg-white/70 text-[8px] text-left">找 Bug</button>
+              </div>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/70 border border-black/5 text-[10px] whitespace-pre-wrap">{message}</div>
+            {!ready && <div className="p-3 rounded-2xl bg-[#fff4f1] text-[9px]">还没连接 GitHub。去 Settings 填 Token，就可以直接维护项目。</div>}
+          </section>
+        )}
+
+        {tab === 'files' && (
+          <section className="p-3.5 space-y-2.5">
+            <div className="flex gap-1.5">
+              <button onClick={() => void list(path)} className="flex-1 py-2 rounded-xl bg-[#292724] text-white text-[9px]">刷新</button>
+              <button onClick={() => void list('')} className="py-2 px-3 rounded-xl bg-white text-[9px]">根目录</button>
+            </div>
+            {file && (
+              <div className="rounded-2xl bg-[#252422] text-white overflow-hidden">
+                <div className="p-2.5 flex items-center gap-2 text-[9px] border-b border-white/10">
+                  <FileCode2 className="w-3.5 h-3.5" />
+                  <span className="flex-1 truncate">{file.path}</span>
+                  <button onClick={() => setFile(null)}><X className="w-3 h-3" /></button>
+                </div>
+                <textarea value={code} onChange={event => setCode(event.target.value)} spellCheck={false} className="w-full h-[310px] bg-transparent p-3 text-[8px] leading-[1.55] font-mono outline-none resize-none" />
+                <div className="p-2 border-t border-white/10">
+                  <button disabled={!dirty || saving} onClick={() => void saveFile()} className="w-full py-2 rounded-lg bg-white text-[#292724] text-[9px] disabled:opacity-30">
+                    <Save className="w-3 h-3 inline mr-1" />{saving ? '保存中…' : '保存到 GitHub'}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="p-2.5 rounded-2xl bg-white/60 text-[9px] text-[#777069]">当前：{path || '/'}</div>
+            <div className="rounded-2xl bg-white/60 overflow-hidden">
+              {busy ? <div className="p-6 text-center"><Loader2 className="w-4 h-4 mx-auto animate-spin" /></div> : items.map(item => (
+                <button key={item.path} onClick={() => void open(item)} className="w-full p-2.5 flex gap-2 items-center border-b border-black/5 text-left">
+                  {item.type === 'dir' ? <Folder className="w-3.5 h-3.5 text-[#9b8068]" /> : <FileCode2 className="w-3.5 h-3.5" />}
+                  <span className="flex-1 text-[9px] truncate">{item.name}</span>
+                  <ChevronRight className="w-3 h-3 text-[#aaa]" />
+                </button>
+              ))}
+              {!busy && !items.length && <div className="p-8 text-center text-[9px] text-[#888]">点击“刷新”读取 GitHub。</div>}
+            </div>
+          </section>
+        )}
+
+        {tab === 'changes' && (
+          <section className="p-3.5 space-y-2.5">
+            <div className="p-3 rounded-2xl bg-[#ebe6de] text-[9px]"><b>Changes</b><div className="mt-1 text-[#777069]">AI 的修改先在这里预览，不会自动写 GitHub。</div></div>
+            {changes.map(change => (
+              <div key={change.path} className="p-3 rounded-2xl bg-white/65 border border-black/5">
+                <div className="text-[9px] font-mono truncate">{change.path}</div>
+                <pre className="mt-2 max-h-28 overflow-hidden rounded-xl bg-[#252422] text-[#ddd] p-2 text-[7px] whitespace-pre-wrap">{change.content.slice(0, 1000)}</pre>
+                <button onClick={() => { setFile({ name: change.path.split('/').pop() || change.path, path: change.path, type: 'file' }); setCode(change.content); setOriginal(''); setTab('files'); }} className="mt-2 w-full py-2 rounded-lg bg-[#292724] text-white text-[9px]">载入编辑器</button>
+              </div>
+            ))}
+            {!changes.length && <div className="py-12 text-center text-[9px] text-[#888]">暂无 AI 修改草案。</div>}
+          </section>
+        )}
+
+        {tab === 'admin' && (
+          <section className="p-3.5 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-[#ebe6de] border border-black/5">
+              <div className="flex items-center gap-2"><ShieldAlert className="w-4 h-4" /><b>Studio Admin</b></div>
+              <div className="mt-1 text-[9px] text-[#777069]">完整项目维护权限：创建、修改、删除文件，也可以递归删除 App / 目录。</div>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/60 space-y-2">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">CREATE FILE</div>
+              <input value={newPath} onChange={event => setNewPath(event.target.value)} placeholder="例如 src/components/screens/MyApp.tsx" className="w-full p-2.5 rounded-xl text-[9px] outline-none" />
+              <textarea value={newContent} onChange={event => setNewContent(event.target.value)} placeholder="文件内容" className="w-full h-28 p-2.5 rounded-xl text-[8px] font-mono outline-none resize-none" />
+              <button disabled={saving} onClick={() => void createFile()} className="w-full py-2.5 rounded-xl bg-[#292724] text-white text-[9px] disabled:opacity-40"><Plus className="w-3 h-3 inline mr-1" />{saving ? '处理中…' : '创建文件'}</button>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/60 space-y-2">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">DELETE</div>
+              <input value={deletePath} onChange={event => setDeletePath(event.target.value)} placeholder="输入文件或 App / 目录路径" className="w-full p-2.5 rounded-xl text-[9px] outline-none" />
+              <div className="grid grid-cols-2 gap-1.5">
+                <button disabled={saving} onClick={() => void deleteFile(deletePath)} className="py-2.5 rounded-xl bg-[#8d4e4e] text-white text-[9px] disabled:opacity-40"><Trash2 className="w-3 h-3 inline mr-1" />删除文件</button>
+                <button disabled={saving} onClick={() => void removeTree()} className="py-2.5 rounded-xl bg-[#9b625b] text-white text-[9px] disabled:opacity-40"><Trash2 className="w-3 h-3 inline mr-1" />删除 App / 目录</button>
+              </div>
+              <div className="text-[8px] leading-relaxed text-[#8f6f68]">递归删除属于最高权限操作，会逐个删除 GitHub 中的文件，并需要你确认。</div>
+            </div>
+          </section>
+        )}
+
+        {tab === 'settings' && (
+          <section className="p-3.5 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-[#ebe6de] text-[9px]"><b>Studio Settings</b><div className="mt-1 text-[#777069]">AI Key 与 GitHub Token 仅保存在当前浏览器。</div></div>
+            <div className="p-3 rounded-2xl bg-white/60 space-y-2">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">AI · OPENAI COMPATIBLE</div>
+              <label className="text-[9px] block">API Base URL<input value={base} onChange={event => setBase(event.target.value)} placeholder="https://api.openai.com/v1" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+              <label className="text-[9px] block">API Key<input type="password" value={key} onChange={event => setKey(event.target.value)} placeholder="sk-..." className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+              <label className="text-[9px] block">Model<input value={model} onChange={event => setModel(event.target.value)} placeholder="模型名称" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/60 space-y-2">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">GITHUB PROJECT</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input value={owner} onChange={event => setOwner(event.target.value)} placeholder="Owner" className="p-2.5 rounded-xl text-[9px] outline-none" />
+                <input value={repo} onChange={event => setRepo(event.target.value)} placeholder="Repository" className="p-2.5 rounded-xl text-[9px] outline-none" />
+              </div>
+              <input value={branch} onChange={event => setBranch(event.target.value)} placeholder="Branch" className="w-full p-2.5 rounded-xl text-[9px] outline-none" />
+              <input type="password" value={token} onChange={event => setToken(event.target.value)} placeholder="Fine-grained GitHub Token" className="w-full p-2.5 rounded-xl text-[9px] outline-none" />
+              <div className="text-[8px] leading-relaxed text-[#888]">建议 Token 只开放这个仓库的 Contents 读写权限。</div>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={saveSettings} className="py-2.5 rounded-xl bg-[#292724] text-white text-[9px]"><Check className="w-3 h-3 inline mr-1" />保存</button>
+              <button onClick={async () => { try { const data = await github('https://api.github.com/user', token); notify('GitHub 已连接：' + (data?.login || 'OK')); await list(''); } catch (error) { notify(error instanceof Error ? error.message : '连接失败'); } }} className="py-2.5 rounded-xl bg-white text-[9px]"><Github className="w-3 h-3 inline mr-1" />测试 GitHub</button>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {notice && <div className="absolute z-50 bottom-20 left-4 right-4 p-2.5 rounded-xl bg-[#292724] text-white text-[9px] text-center">{notice}</div>}
+
+      {tab === 'chat' && (
+        <div className="absolute z-40 left-3 right-3 bottom-[65px] flex gap-1.5">
+          <input value={prompt} onChange={event => setPrompt(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void ask(); }} placeholder="告诉 MEME 你想改什么…" className="flex-1 p-2.5 rounded-xl bg-white border border-black/10 text-[9px] outline-none" />
+          <button onClick={() => void ask()} disabled={aiBusy || !prompt.trim()} className="w-10 rounded-xl bg-[#292724] text-white grid place-items-center disabled:opacity-30">
+            {aiBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      )}
+
+      <nav className="absolute bottom-0 left-0 right-0 z-30 px-2 pb-3 pt-2 bg-[#f7f4ee]/95 border-t border-black/10 grid grid-cols-5 gap-1">
+        {tabButton('chat', 'Chat', MessageCircle)}
+        {tabButton('files', 'Files', FileCode2)}
+        {tabButton('changes', 'Changes', Upload)}
+        {tabButton('admin', 'Admin', ShieldAlert)}
+        {tabButton('settings', 'Settings', KeyRound)}
+      </nav>
+    </div>
+  );
 }
