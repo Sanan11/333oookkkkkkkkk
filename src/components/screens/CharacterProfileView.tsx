@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { ArrowLeft, Download, Edit3, FileDown, FilePlus2, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
@@ -7,6 +7,13 @@ import {
   exportCharacterJson,
   parseCharacterFile,
 } from '../../data/characterImport';
+import type { CharacterMemory } from '../../store/characterMemory';
+import {
+  addCharacterMemoryItem,
+  deleteCharacterMemoryItem,
+  getCharacterMemory,
+  saveCharacterMemory,
+} from '../../store/characterMemory';
 
 interface CharacterProfileViewProps {
   themeMode?: any;
@@ -33,6 +40,29 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
   const [notice, setNotice] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const selected = characters.find(character => character.id === selectedId) || characters[0] || null;
+  const [memory, setMemory] = useState<CharacterMemory>(
+    () => selected ? getCharacterMemory(selected.id, selected.name) : {
+      characterId: 'none',
+      characterName: '',
+      summary: '',
+      items: [],
+      updatedAt: new Date().toISOString(),
+    },
+  );
+
+  useEffect(() => {
+    setMemory(
+      selected
+        ? getCharacterMemory(selected.id, selected.name)
+        : {
+            characterId: 'none',
+            characterName: '',
+            summary: '',
+            items: [],
+            updatedAt: new Date().toISOString(),
+          },
+    );
+  }, [selected?.id, selected?.name]);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -44,6 +74,32 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     setCharacters(prev =>
       prev.map(item => item.id === selected.id ? { ...item, ...patch } : item)
     );
+  };
+
+  const patchMemory = (patch: Partial<CharacterMemory>) => {
+    if (!selected) return;
+    const next = saveCharacterMemory({
+      ...memory,
+      ...patch,
+      characterId: selected.id,
+      characterName: selected.name,
+    });
+    setMemory(next);
+  };
+
+  const addMemory = () => {
+    if (!selected) return;
+    const content = window.prompt('写入一条会长期影响角色回复的记忆：');
+    if (!content?.trim()) return;
+    setMemory(addCharacterMemoryItem(selected.id, selected.name, content, { source: 'manual', importance: 70 }));
+    showNotice('长期记忆已保存');
+  };
+
+  const removeMemory = (itemId: string) => {
+    if (!selected) return;
+    const next = deleteCharacterMemoryItem(selected.id, itemId);
+    if (next) setMemory(next);
+    showNotice('记忆条目已删除');
   };
 
   const handleImport = async (file?: File) => {
@@ -284,6 +340,37 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                     <Trash2 className="w-3.5 h-3.5" />
                     移除角色
                   </button>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[8px] tracking-[1.5px] font-mono text-[#8b8782]">LONG-TERM MEMORY</div>
+                    <button
+                      onClick={addMemory}
+                      className="px-2 py-1 rounded-full bg-[#292724] text-white text-[9px]"
+                    >
+                      ＋ 记忆
+                    </button>
+                  </div>
+                  <textarea
+                    value={memory.summary}
+                    onChange={e => patchMemory({ summary: e.target.value })}
+                    placeholder="角色长期记忆摘要：重要经历、共同约定、关系转折、不能忘记的事实……"
+                    className="w-full min-h-[82px] bg-white/65 border border-[rgba(40,36,31,.1)] rounded-xl p-2.5 text-[10.5px] leading-relaxed outline-none resize-y font-serif-sc"
+                  />
+                  {memory.items.length > 0 && (
+                    <div className="mt-2.5 space-y-1.5">
+                      {memory.items.slice(0, 12).map(item => (
+                        <div key={item.id} className="flex items-start gap-2 bg-white/50 rounded-xl p-2">
+                          <div className="flex-1 text-[10px] leading-relaxed text-[#4f4943]">{item.content}</div>
+                          <button onClick={() => removeMemory(item.id)} className="shrink-0 text-[#9b625b] text-[9px]">删除</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 text-[8px] text-[#8b8782] font-mono">
+                    AI 每次回复都会读取这里；刷新页面也会保留。
+                  </div>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
