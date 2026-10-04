@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
+import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -737,8 +738,9 @@ export function LineConversationView({
 
   // 发起线下邀约 (Offline Meetup Invite)
   const handleSendOfflineInvite = (from: 'me' | 'other') => {
+    const inviteId = String(Date.now());
     const newMsg = {
-      id: Date.now(),
+      id: Number(inviteId),
       sender: from,
       type: 'offline-invite',
       inviteFrom: from,
@@ -750,6 +752,20 @@ export function LineConversationView({
       time: '刚刚',
     };
     setMessages((prev) => [...prev, newMsg]);
+
+    upsertOfflineEvent({
+      id: `offline-${inviteId}`,
+      characterId: contactName,
+      characterName: characterProfile.nickname,
+      title: offlineInviteData.theme || `与 ${characterProfile.nickname} 的线下见面`,
+      location: offlineInviteData.location,
+      time: offlineInviteData.time,
+      theme: offlineInviteData.theme,
+      letter: offlineInviteData.letter,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
     setShowOfflineInviteModal(false);
     showToast(from === 'other' ? '角色已向你发起线下邀约 ✉️' : '已向角色发送线下邀约 ✉️');
   };
@@ -759,6 +775,7 @@ export function LineConversationView({
     setMessages((prev) =>
       prev.map((m) => (m.id === msgId ? { ...m, inviteStatus: 'accepted' } : m))
     );
+    updateOfflineEvent(`offline-${msgId}`, { status: 'accepted' });
     setStatusData((prev) => ({ ...prev, favor: String(Number(prev.favor) + 5) }));
     showToast('已确认赴约！好感度 +5 💖');
 
@@ -780,6 +797,7 @@ export function LineConversationView({
     setMessages((prev) =>
       prev.map((m) => (m.id === msgId ? { ...m, inviteStatus: 'declined' } : m))
     );
+    updateOfflineEvent(`offline-${msgId}`, { status: 'declined' });
     showToast('已暂缓本次邀约');
   };
 
