@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
-import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
+import { generateCharacterReply, generateCreativeText, readStoredAiSettings } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
 import { readAppSettings } from '../../store/appSettings';
 import { getMedia, putMedia } from '../../store/mediaVault';
@@ -1296,6 +1296,8 @@ export function LineConversationView({
                 ));
               },
             });
+
+            if (!result) throw new Error('图片理解失败');
 
             setMessages(prev => prev.map(message =>
               message.id === replyMsgId
