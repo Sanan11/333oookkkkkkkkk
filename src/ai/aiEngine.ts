@@ -304,15 +304,13 @@ async function callGemini(input: AiReplyInput): Promise<string> {
   const { settings } = input;
   const base = (settings.apiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
   const action = settings.streaming ? 'streamGenerateContent' : 'generateContent';
-  const suffix = settings.streaming ? '&alt=sse' : '';
+  const suffix = settings.streaming ? '?alt=sse' : '';
   const endpoint =
     base +
     '/models/' +
     encodeURIComponent(settings.model.trim()) +
     ':' +
     action +
-    '?key=' +
-    encodeURIComponent(settings.apiKey.trim()) +
     suffix;
 
   const system = buildCharacterSystemPrompt(input);
@@ -330,7 +328,10 @@ async function callGemini(input: AiReplyInput): Promise<string> {
 
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': settings.apiKey.trim(),
+    },
     body: JSON.stringify(body),
   });
 
