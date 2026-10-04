@@ -268,6 +268,15 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
           isGroup={activeItem?.isGroup || activeChatName === '我们的小角落'}
           isPinned={activeItem?.isPinned || false}
           isMuted={activeItem?.isMuted || false}
+          onConversationActivity={({ preview, time }) => {
+            setChatItems((prev) =>
+              prev.map((c) =>
+                c.name === activeChatName
+                  ? { ...c, preview, time, unread: 0 }
+                  : c
+              )
+            );
+          }}
           onTogglePin={() => {
             setChatItems((prev) =>
               prev.map((c) =>
