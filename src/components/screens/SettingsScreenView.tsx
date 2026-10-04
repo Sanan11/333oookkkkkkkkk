@@ -1,16 +1,52 @@
-  if (value < 1024 * 1024) return (value / 1024).toFixed(1) + ' KB';
-  return (value / (1024 * 1024)).toFixed(1) + ' MB';
+import { useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeft, Bell, CheckCircle2, Database, Download, Image as ImageIcon, KeyRound,
+  Mic2, RefreshCw, Save, Server, Shield, SlidersHorizontal, Smartphone, Sparkles,
+  Trash2, Volume2, Wifi
+} from 'lucide-react';
+import type { ScreenType } from '../../types';
+import { usePersistentState } from '../../store/usePersistentState';
+import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
+import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
+import { generateImage, generateSpeech } from '../../ai/mediaEngine';
+import { exportMedia, importMedia } from '../../store/mediaVault';
+import {
+  getBackgroundHeartbeat,
+  requestNotificationPermission,
+  stopBackgroundRuntime,
+  startBackgroundRuntime,
+} from '../../store/backgroundRuntime';
+
+function collectLocalData(includeSecrets = true) {
+  const data: Record<string, unknown> = {};
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (!key || (!key.startsWith('phone:') && !key.startsWith('line:'))) continue;
+    try { data[key] = JSON.parse(localStorage.getItem(key) || 'null'); }
+    catch { data[key] = localStorage.getItem(key); }
+  }
+
+  if (!includeSecrets && data['phone:settings'] && typeof data['phone:settings'] === 'object') {
+    const safe = { ...(data['phone:settings'] as Record<string, unknown>) };
+    for (const key of ['apiKey', 'voiceApiKey', 'imageApiKey']) safe[key] = '';
+    data['phone:settings'] = safe;
+  }
+
+  return data;
 }
 
-export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: ScreenType) => void }) {
-  const importRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettingsState] = usePersistentState<AppSettings>('phone:settings', DEFAULT_APP_SETTINGS);
-  const [notice, setNotice] = useState('');
-  const [openSection, setOpenSection] = useState<'ai' | 'voice' | 'image' | 'data' | 'background'>('ai');
-  const [testing, setTesting] = useState(false);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [heartbeat, setHeartbeat] = useState(() => getBackgroundHeartbeat());
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function prettyBytes(value: number) {
+  if (value < 1024) return value + ' B';
   if (value < 1024 * 1024) return (value / 1024).toFixed(1) + ' KB';
   return (value / (1024 * 1024)).toFixed(1) + ' MB';
 }
@@ -31,3 +67,437 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
     const data = collectLocalData();
     const size = new Blob([JSON.stringify(data)]).size;
     return { keys: Object.keys(data).length, size };
+  }, [notice, settings]);
+
+  const notify = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(''), 2200);
+  };
+
+  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const next = saveAppSettings({ [key]: value });
+    setSettingsState(next);
+  };
+
+  const copyChatToMedia = (kind: 'voice' | 'image') => {
+    if (kind === 'voice') {
+      update('voiceBaseUrl', settings.apiBaseUrl);
+      update('voiceApiKey', settings.apiKey);
+      update('voiceModel', settings.model);
+      notify('已复制聊天 API 到语音配置');
+    } else {
+      update('imageBaseUrl', settings.apiBaseUrl);
+      update('imageApiKey', settings.apiKey);
+      update('imageModel', settings.model);
+      notify('已复制聊天 API 到图片配置');
+    }
+  };
+
+  const importBackup = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const data = parsed?.data;
+      if (!data || typeof data !== 'object') throw new Error('备份文件格式不正确');
+
+      for (const [key, value] of Object.entries(data)) {
+        if (!key.startsWith('phone:') && !key.startsWith('line:')) continue;
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      if (parsed?.media && typeof parsed.media === 'object') {
+        await importMedia(parsed.media as Record<string, string>);
+      }
+
+      window.dispatchEvent(new Event('sane333:data-restored'));
+      notify('角色、聊天、设置与媒体已恢复；正在重新载入本机项目状态');
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '恢复失败');
+    } finally {
+      if (importRef.current) importRef.current.value = '';
+    }
+  };
+
+  const exportFullBackup = async () => {
+    if (backingUp) return;
+    setBackingUp(true);
+    try {
+      const media = await exportMedia().catch(() => ({} as Record<string, string>));
+      downloadJson(`sane333-full-backup-${Date.now()}.json`, {
+        version: 4,
+        exportedAt: new Date().toISOString(),
+        data: collectLocalData(includeSecretsInBackup),
+        media,
+      });
+      notify(`完整备份已导出 · ${Object.keys(media).length} 个媒体文件`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '备份导出失败');
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const clearAll = () => {
+    if (!window.confirm('确定清空本机全部角色、聊天、世界书、记忆、设置与剧情存档吗？此操作不可撤销。')) return;
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('phone:') || key?.startsWith('line:')) keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+    setSettingsState(DEFAULT_APP_SETTINGS);
+    stopBackgroundRuntime();
+    notify('本机项目空间已清空');
+    window.setTimeout(() => window.location.reload(), 500);
+  };
+
+  const testVoice = async () => {
+    try {
+      const media = await generateSpeech('Sane333 语音连接测试。', settings);
+      if (media?.url) {
+        const audio = new Audio(media.url);
+        await audio.play();
+      }
+      notify(media?.source === 'browser' ? '浏览器语音已调用' : 'TTS 语音连接成功');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '语音测试失败');
+    }
+  };
+
+  const testImage = async () => {
+    try {
+      const result = await generateImage('a quiet cinematic portrait, editorial photography, no text', settings);
+      notify(result.url ? '图片接口已返回结果' : '图片接口无结果');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '图片测试失败');
+    }
+  };
+
+  const enableNotifications = async () => {
+    const permission = await requestNotificationPermission();
+    if (permission === 'granted') {
+      update('notificationEnabled', true);
+      notify('通知权限已开启');
+    } else if (permission === 'denied') {
+      notify('浏览器拒绝了通知权限，请在站点设置里重新开启');
+    } else {
+      notify('当前浏览器不支持系统通知');
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full flex flex-col overflow-hidden" style={{ background: 'var(--paper)', color: 'var(--ink)' }}>
+      <div className="absolute inset-0 opacity-15 bg-paper-noise pointer-events-none" />
+
+      <header className="relative z-10 px-5 pt-12 pb-3.5 border-b border-[rgba(40,36,31,.12)] bg-[rgba(247,244,238,.88)] backdrop-blur-xl flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => onNavigate('home')} className="w-8 h-8 rounded-full bg-white/40 border border-white/60 grid place-items-center text-[#242323] shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="text-[8px] font-mono tracking-[2px] text-[#817a72] uppercase">SYSTEM / CONNECTION / STORAGE</div>
+            <h2 className="font-serif font-bold text-base tracking-tight text-[#242323]">设置 · Control Center</h2>
+          </div>
+        </div>
+        <span className="text-[8px] font-mono text-[#8b7560]">{localStats.keys} KEYS</span>
+      </header>
+
+      <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 text-xs">
+        <section className="relative overflow-hidden p-4 rounded-2xl bg-[#292724] text-white shadow-[0_10px_30px_rgba(30,25,20,.16)]">
+          <div className="absolute -right-10 -top-12 w-32 h-32 rounded-full border border-white/10" />
+          <div className="absolute right-2 bottom-2 text-5xl font-serif opacity-10">333</div>
+          <div className="relative text-[8px] font-mono tracking-[2px] text-white/50">SANE333 / PRIVATE DEVICE</div>
+          <div className="relative mt-2 text-lg font-serif font-bold">你的 API、角色与存档，都在这里。</div>
+          <div className="relative mt-1 text-[9px] text-white/55 leading-relaxed">支持 Gemini、任何 OpenAI Compatible 第三方接口，以及独立语音 / 图片接口。</div>
+        </section>
+
+        <div className="grid grid-cols-5 gap-1.5">
+          {[
+            ['ai', 'AI'],
+            ['voice', '语音'],
+            ['image', '图片'],
+            ['data', '数据'],
+            ['background', '后台'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setOpenSection(key as typeof openSection)}
+              className={`py-2 rounded-xl border text-[9px] transition-all ${openSection === key ? 'bg-[#292724] border-[#292724] text-white shadow-xs' : 'bg-white/55 border-[rgba(40,36,31,.1)] text-[#5f5952]'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {openSection === 'ai' && (
+          <section className="p-4 rounded-2xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <KeyRound className="w-3.5 h-3.5" /> CHAT AI / LLM
+            </div>
+            <div className="space-y-2.5">
+              <label className="block text-[9px] text-[#7e7770]">Provider
+                <select value={settings.provider} onChange={e => update('provider', e.target.value as AppSettings['provider'])} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none">
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openai-compatible">OpenAI Compatible · 第三方</option>
+                  <option value="custom">Custom OpenAI Endpoint</option>
+                </select>
+              </label>
+              <label className="block text-[9px] text-[#7e7770]">API Base URL
+                <input value={settings.apiBaseUrl} onChange={e => update('apiBaseUrl', e.target.value)} placeholder={settings.provider === 'gemini' ? '留空 = Google Gemini API' : '例如 https://your-provider.example/v1'} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+              </label>
+              <label className="block text-[9px] text-[#7e7770]">API Key
+                <input type="password" value={settings.apiKey} onChange={e => update('apiKey', e.target.value)} placeholder="只保存在这台设备的浏览器本地" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none" />
+              </label>
+              <label className="block text-[9px] text-[#7e7770]">Model
+                <div className="flex gap-1.5 mt-1">
+                  <input value={settings.model} onChange={e => update('model', e.target.value)} placeholder="例如 gemini-2.5-flash / 你的第三方模型 ID" className="flex-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+                  {settings.provider !== 'gemini' && (
+                    <button
+                      disabled={loadingModels}
+                      onClick={async () => {
+                        setLoadingModels(true);
+                        try {
+                          const models = await listOpenAiCompatibleModels(settings);
+                          setAvailableModels(models);
+                          notify(models.length ? `读取到 ${models.length} 个模型` : '接口没有返回模型列表');
+                        } catch (error) {
+                          notify(error instanceof Error ? error.message : '读取模型失败');
+                        } finally {
+                          setLoadingModels(false);
+                        }
+                      }}
+                      className="px-2.5 rounded-xl bg-[#292724] text-white text-[9px] disabled:opacity-40"
+                      title="从兼容接口读取 /models"
+                    >
+                      {loadingModels ? '…' : '读取'}
+                    </button>
+                  )}
+                </div>
+              </label>
+              {availableModels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {availableModels.slice(0, 18).map(model => (
+                    <button key={model} onClick={() => update('model', model)} className="px-2 py-1 rounded-full bg-white/60 border border-black/5 text-[8px] font-mono text-[#675f58]">
+                      {model}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-2">
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">上下文
+                  <input type="number" min={4} max={200} value={settings.contextLength} onChange={e => update('contextLength', Math.max(4, Math.min(200, Number(e.target.value) || 24)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
+                  <span className="text-[8px] text-[#938b83]">轮</span>
+                </label>
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">Temperature
+                  <input type="number" step="0.05" min={0} max={2} value={settings.temperature} onChange={e => update('temperature', Math.max(0, Math.min(2, Number(e.target.value) || 0.85)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
+                </label>
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">最大输出
+                  <input type="number" min={128} max={12000} value={settings.maxOutputTokens} onChange={e => update('maxOutputTokens', Math.max(128, Math.min(12000, Number(e.target.value) || 1200)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
+                  <span className="text-[8px] text-[#938b83]">tokens</span>
+                </label>
+                <button onClick={() => update('streaming', !settings.streaming)} className="bg-white/55 rounded-xl p-2.5 text-left text-[9px]">
+                  Streaming
+                  <div className="mt-1 font-semibold text-[#8b7560]">{settings.streaming ? 'ON' : 'OFF'}</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-start gap-2 rounded-xl bg-white/40 border border-black/5 p-2.5">
+              <Shield className="w-3.5 h-3.5 text-[#8b7560] mt-0.5 shrink-0" />
+              <div className="text-[8.5px] leading-relaxed text-[#7a726a]">
+                API Key 默认存浏览器本地。某些第三方接口会禁止浏览器跨域；遇到 CORS 时，再把同一配置交给后端代理即可。App 本身不会自动上传你的角色数据。
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button disabled={testing} onClick={async () => {
+                setTesting(true);
+                try {
+                  const result = await testAiConnection(settings);
+                  notify(result.text || 'AI 连接成功');
+                } catch (error) {
+                  notify(error instanceof Error ? error.message : 'AI 连接失败');
+                } finally {
+                  setTesting(false);
+                }
+              }} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Wifi className="w-3.5 h-3.5" /> {testing ? '测试中…' : '测试聊天 API'}
+              </button>
+              <button onClick={() => { update('autoSave', !settings.autoSave); notify(settings.autoSave ? '自动保存关闭' : '自动保存开启'); }} className="py-2.5 rounded-xl bg-white/65 border border-[rgba(40,36,31,.1)] text-[#4d4843] text-[10px]">
+                自动保存 · {settings.autoSave ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {openSection === 'voice' && (
+          <section className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <Mic2 className="w-3.5 h-3.5" /> VOICE / TTS
+            </div>
+            <button onClick={() => update('voiceEnabled', !settings.voiceEnabled)} className="w-full p-3 rounded-xl bg-[#ebe7df] flex items-center justify-between text-left">
+              <div><div className="text-[10px] font-semibold text-[#403b36]">角色语音</div><div className="text-[8px] text-[#8b8782] mt-0.5">AI 回复可以自动朗读</div></div>
+              <span className="text-[9px] font-mono text-[#8b7560]">{settings.voiceEnabled ? 'ON' : 'OFF'}</span>
+            </button>
+            <div className="mt-2.5 space-y-2.5">
+              <label className="block text-[9px] text-[#7e7770]">TTS Provider
+                <select value={settings.voiceProvider} onChange={e => update('voiceProvider', e.target.value as AppSettings['voiceProvider'])} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none">
+                  <option value="browser">浏览器原生语音 · 免费</option>
+                  <option value="openai-compatible">OpenAI Compatible / audio-speech</option>
+                  <option value="custom">Custom TTS Endpoint</option>
+                </select>
+              </label>
+              {settings.voiceProvider !== 'browser' && <>
+                <label className="block text-[9px] text-[#7e7770]">Voice API Base URL
+                  <input value={settings.voiceBaseUrl} onChange={e => update('voiceBaseUrl', e.target.value)} placeholder="例如 https://api.openai.com/v1" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+                </label>
+                <label className="block text-[9px] text-[#7e7770]">Voice API Key
+                  <input type="password" value={settings.voiceApiKey} onChange={e => update('voiceApiKey', e.target.value)} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none" />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">TTS Model
+                    <input value={settings.voiceModel} onChange={e => update('voiceModel', e.target.value)} className="w-full mt-1 bg-transparent outline-none font-mono text-[10px]" />
+                  </label>
+                  <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">Voice
+                    <input value={settings.voiceName} onChange={e => update('voiceName', e.target.value)} className="w-full mt-1 bg-transparent outline-none font-mono text-[10px]" />
+                  </label>
+                </div>
+              </>}
+              <button onClick={() => update('autoSpeakAiReplies', !settings.autoSpeakAiReplies)} className="w-full py-2.5 rounded-xl bg-[#ebe7df] border border-[rgba(40,36,31,.1)] text-left px-3 text-[10px]">
+                AI 回复自动发声 · <b className="text-[#8b7560]">{settings.autoSpeakAiReplies ? 'ON' : 'OFF'}</b>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button onClick={() => copyChatToMedia('voice')} className="py-2 rounded-xl bg-white/75 border border-[rgba(40,36,31,.1)] text-[9px] flex items-center justify-center gap-1"><RefreshCw className="w-3 h-3" />复制聊天 API</button>
+              <button onClick={testVoice} className="py-2 rounded-xl bg-[#292724] text-white text-[9px] flex items-center justify-center gap-1"><Volume2 className="w-3 h-3" />测试语音</button>
+            </div>
+          </section>
+        )}
+
+        {openSection === 'image' && (
+          <section className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <ImageIcon className="w-3.5 h-3.5" /> IMAGE / VISION
+            </div>
+            <button onClick={() => update('imageEnabled', !settings.imageEnabled)} className="w-full p-3 rounded-xl bg-[#ebe7df] flex items-center justify-between text-left">
+              <div><div className="text-[10px] font-semibold text-[#403b36]">图片接口</div><div className="text-[8px] text-[#8b8782] mt-0.5">供 LINE 发图与后续图片剧情使用</div></div>
+              <span className="text-[9px] font-mono text-[#8b7560]">{settings.imageEnabled ? 'ON' : 'OFF'}</span>
+            </button>
+            <div className="mt-2.5 space-y-2.5">
+              <label className="block text-[9px] text-[#7e7770]">Image API Base URL
+                <input value={settings.imageBaseUrl} onChange={e => update('imageBaseUrl', e.target.value)} placeholder="例如 https://api.openai.com/v1" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+              </label>
+              <label className="block text-[9px] text-[#7e7770]">Image API Key
+                <input type="password" value={settings.imageApiKey} onChange={e => update('imageApiKey', e.target.value)} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none" />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">Image Model
+                  <input value={settings.imageModel} onChange={e => update('imageModel', e.target.value)} className="w-full mt-1 bg-transparent outline-none font-mono text-[10px]" />
+                </label>
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">Size
+                  <select value={settings.imageSize} onChange={e => update('imageSize', e.target.value)} className="w-full mt-1 bg-transparent outline-none text-[10px]">
+                    <option>1024x1024</option>
+                    <option>1536x1024</option>
+                    <option>1024x1536</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => copyChatToMedia('image')} className="py-2 rounded-xl bg-white/75 border border-[rgba(40,36,31,.1)] text-[9px] flex items-center justify-center gap-1"><RefreshCw className="w-3 h-3" />复制聊天 API</button>
+              <button onClick={testImage} className="py-2 rounded-xl bg-[#292724] text-white text-[9px] flex items-center justify-center gap-1"><ImageIcon className="w-3 h-3" />测试图片接口</button>
+            </div>
+            <div className="mt-2 text-[8.5px] text-[#8b8782] leading-relaxed">视觉理解不需要独立模型配置：LINE 上传图片时，会把图片作为多模态消息送给当前聊天模型；前提是你的模型支持 vision / multimodal。</div>
+          </section>
+        )}
+
+        {openSection === 'data' && (
+          <section className="p-4 rounded-2xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <Database className="w-3.5 h-3.5" /> DATA / BACKUP
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="p-3 rounded-xl bg-white/55"><div className="text-lg font-serif font-bold text-[#292724]">{localStats.keys}</div><div className="text-[8px] text-[#8b8782]">本机数据项</div></div>
+              <div className="p-3 rounded-xl bg-white/55"><div className="text-lg font-serif font-bold text-[#292724]">{prettyBytes(localStats.size)}</div><div className="text-[8px] text-[#8b8782]">估算占用</div></div>
+            </div>
+            <label className="mt-2.5 flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/55 border border-black/5 text-[9px] text-[#645c55]">
+              <span>备份包含 API 密钥</span>
+              <input type="checkbox" checked={includeSecretsInBackup} onChange={e => setIncludeSecretsInBackup(e.target.checked)} />
+            </label>
+            <div className="mt-1 text-[8px] text-[#8b8782]">完整备份会同时包含 IndexedDB 中的图片/语音；默认不导出 API 密钥。</div>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={exportFullBackup} disabled={backingUp} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5 disabled:opacity-50"><Download className="w-3.5 h-3.5" />{backingUp ? '整理备份…' : '导出完整备份'}</button>
+              <button onClick={() => importRef.current?.click()} className="py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" />导入 / 恢复</button>
+            </div>
+            <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e => importBackup(e.target.files?.[0])} />
+            <button onClick={() => onNavigate('project-studio')} className="mt-2 w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-[#8b7560]" />进入 Project Studio 修改项目</button>
+            <button onClick={clearAll} className="mt-2 w-full py-2.5 rounded-xl bg-white/60 border border-[#cba6a0]/30 text-[#9b625b] text-[10px] flex items-center justify-center gap-1.5"><Trash2 className="w-3.5 h-3.5" />清空全部本机数据</button>
+          </section>
+        )}
+
+        {openSection === 'background' && (
+          <section className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <Server className="w-3.5 h-3.5" /> BACKGROUND / RUNTIME
+            </div>
+            <div className="p-3 rounded-xl bg-[#ebe7df]">
+              <div className="flex items-center justify-between">
+                <div><div className="text-[10px] font-semibold">后台运行心跳</div><div className="text-[8px] text-[#8b8782] mt-0.5">保存活跃时间、恢复运行状态、支撑主动事件调度</div></div>
+                <button onClick={() => { const next = !settings.backgroundEnabled; update('backgroundEnabled', next); if (next) startBackgroundRuntime(); else stopBackgroundRuntime(); }} className="text-[9px] font-mono text-[#8b7560]">{settings.backgroundEnabled ? 'ON' : 'OFF'}</button>
+              </div>
+              <div className="mt-3 h-px bg-black/5" />
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <div className="bg-white/55 rounded-xl p-2.5"><div className="text-[8px] text-[#8b8782]">最后活跃</div><div className="mt-1 text-[9px] font-mono text-[#4f4943]">{heartbeat?.lastActiveAt ? new Date(heartbeat.lastActiveAt).toLocaleString() : '暂无记录'}</div></div>
+                <div className="bg-white/55 rounded-xl p-2.5"><div className="text-[8px] text-[#8b8782]">最后心跳</div><div className="mt-1 text-[9px] font-mono text-[#4f4943]">{heartbeat?.heartbeatAt ? new Date(heartbeat.heartbeatAt).toLocaleString() : '暂无记录'}</div></div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 p-3 rounded-xl bg-[#ebe7df]">
+              <div className="text-[10px] font-semibold">主动事件</div>
+              <div className="mt-2 flex items-center justify-between text-[9px]">
+                <span>角色主动消息 / 邀约调度</span>
+                <button onClick={() => update('proactiveMessagesEnabled', !settings.proactiveMessagesEnabled)} className="font-mono text-[#8b7560]">{settings.proactiveMessagesEnabled ? 'ON' : 'OFF'}</button>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[9px]">
+                <span>心跳间隔</span>
+                <select value={settings.keepAliveMinutes} onChange={e => update('keepAliveMinutes', Number(e.target.value))} className="bg-white/65 rounded-lg px-2 py-1 outline-none text-[9px]">
+                  {[1, 5, 10, 15, 30].map(v => <option key={v} value={v}>{v} min</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-2.5 p-3 rounded-xl bg-[#ebe7df]">
+              <div className="flex items-center gap-2 text-[10px] font-semibold"><Bell className="w-3.5 h-3.5 text-[#8b7560]" /> 浏览器通知</div>
+              <div className="mt-1 text-[8.5px] text-[#8b8782]">角色主动消息、线下邀约和未来后台事件可以用系统通知提醒你。</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button onClick={enableNotifications} className="py-2 rounded-xl bg-[#292724] text-white text-[9px]">申请通知权限</button>
+                <button onClick={() => update('notificationEnabled', !settings.notificationEnabled)} className="py-2 rounded-xl bg-white/70 border border-[rgba(40,36,31,.1)] text-[9px]">通知 · {settings.notificationEnabled ? 'ON' : 'OFF'}</button>
+              </div>
+            </div>
+
+            <div className="mt-2.5 p-3 rounded-xl bg-white/65 border border-[rgba(40,36,31,.08)]">
+              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#403b36]"><Sparkles className="w-3.5 h-3.5 text-[#8b7560]" /> PWA / 手机后台</div>
+              <p className="mt-1.5 text-[8.5px] leading-relaxed text-[#7d756d]">网页安装成 PWA 后可以离线打开外壳、保留本机数据，并通过 Service Worker 恢复页面资源。浏览器仍可能在真正后台时冻结 JavaScript，因此这里做的是“可恢复运行”，不是强制绕过系统休眠。</p>
+              <button onClick={() => { setHeartbeat(getBackgroundHeartbeat()); notify('后台状态已刷新'); }} className="mt-2 w-full py-2 rounded-xl bg-white border border-black/5 text-[9px] flex items-center justify-center gap-1.5"><RefreshCw className="w-3 h-3" />刷新后台状态</button>
+            </div>
+          </section>
+        )}
+
+        <section className="p-4 rounded-2xl bg-white/45 border border-[rgba(40,36,31,.08)]">
+          <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-2"><SlidersHorizontal className="w-3.5 h-3.5" /> SYSTEM MAP</div>
+          <div className="grid grid-cols-2 gap-y-1.5 text-[9px] text-[#5d5751]">
+            <div>✓ 本地持久化</div><div>✓ PNG / JSON / YAML</div>
+            <div>✓ World Book</div><div>✓ 长期记忆</div>
+            <div>✓ Gemini / OpenAI Compatible</div><div>✓ Vision 输入</div>
+            <div>✓ TTS / 浏览器语音</div><div>✓ 图片生成接口</div>
+            <div>✓ JSON 全量备份</div><div>✓ PWA / Service Worker</div>
+            <div>→ 主动事件 AI 调度</div><div>→ 云端数据库可选接入</div>
+          </div>
+        </section>
+      </div>
+
+      {notice && <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-16 bg-[#292724] text-white px-3.5 py-2 rounded-full text-[10px] shadow-lg">{notice}</div>}
+    </div>
+  );
+}
