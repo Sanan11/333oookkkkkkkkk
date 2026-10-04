@@ -225,6 +225,36 @@ export function syncCharacterRoutine(
   window.dispatchEvent(new CustomEvent('sane333:world-state-changed', { detail: state }));
 }
 
+function runWorldRoutineClock() {
+  if (typeof window === 'undefined') return;
+  const tick = () => {
+    try {
+      const raw = window.localStorage.getItem('phone:characters');
+      const characters = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(characters) || !characters.length) return;
+      const now = new Date();
+      characters.forEach((character: ImportedCharacter) => {
+        const scheduleRaw = window.localStorage.getItem(`line:schedule:${character.name}`);
+        if (!scheduleRaw) return;
+        try {
+          const schedule = JSON.parse(scheduleRaw);
+          if (Array.isArray(schedule)) syncCharacterRoutine(character, schedule, now);
+        } catch {
+          // One broken schedule must not stop the world clock.
+        }
+      });
+    } catch {
+      // Runtime ticking is best-effort.
+    }
+  };
+  tick();
+  window.setInterval(tick, 60_000);
+}
+
+if (typeof window !== 'undefined') {
+  runWorldRoutineClock();
+}
+
 export function setCurrentScene(sceneId: string | null) {
   if (typeof window === 'undefined') return;
   const state = readState();
