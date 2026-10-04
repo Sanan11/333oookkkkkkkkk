@@ -2,6 +2,7 @@ import YAML from 'yaml';
 export interface ImportedCharacter {
   id: string;
   name: string;
+  variantLabel: string;
   avatar?: string;
   description: string;
   personality: string;
@@ -39,10 +40,12 @@ function normalizeCharacter(raw: any, sourceFormat: ImportedCharacter['sourceFor
   const data = getCardPayload(raw);
   const now = new Date().toISOString();
   const name = cleanString(data.name) || '未命名角色';
+  const variantLabel = cleanString(data.variantLabel) || cleanString(data.variant_label) || cleanString(data.lifeStage) || cleanString(data.life_stage) || cleanString(data.timeline) || cleanString(data.characterVersion) || cleanString(data.character_version) || '默认版本';
 
   return {
     id: cleanString(data.id) || `char-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name,
+    variantLabel,
     avatar: cleanString(data.avatar) || cleanString(data.avatar_url),
     description: cleanString(data.description) || cleanString(data.desc),
     personality: cleanString(data.personality),
@@ -187,6 +190,7 @@ export function exportCharacterJson(character: ImportedCharacter): string {
   return JSON.stringify(
     {
       name: character.name,
+      variantLabel: character.variantLabel,
       description: character.description,
       personality: character.personality,
       scenario: character.scenario,
