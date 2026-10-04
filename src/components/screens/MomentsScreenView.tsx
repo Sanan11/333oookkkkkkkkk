@@ -20,6 +20,7 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
   const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
   const npcs = getNpcs();
   const project = getProjectManifest();
+  const worldContext = worldbooks.flatMap(book => book.enabled ? book.entries.filter(entry => entry.enabled).map(entry => entry.name + ': ' + entry.content) : []).join('\n') || '暂无世界书内容';
   const notify = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(''), 2200); };
 
   const inviteNpcComment = async (post: any) => {
@@ -123,7 +124,7 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
 
             {/* Analog Film Photos */}
             <div className={`grid gap-2 ${post.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-              {post.images.map((img, i) => (
+              {post.images.map((img: string, i: number) => (
                 <div key={i} className="rounded-xl overflow-hidden p-1.5 bg-[#eee9df] border border-[rgba(40,36,31,.1)] shadow-xs">
                   <img
                     src={img}
