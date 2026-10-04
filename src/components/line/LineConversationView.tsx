@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import { getCharacterProfile } from '../../data/characterProfiles';
+import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -38,50 +39,10 @@ export function LineConversationView({
 }: LineConversationViewProps) {
   // Input & Messages
   const [inputText, setInputText] = useState(initialDraft);
-  const [messages, setMessages] = usePersistentState<any[]>(`line:conversation:${contactName}`, [
-    {
-      id: 1,
-      sender: 'other',
-      variants: ['你今天好像一直在忙。', '刚看你朋友圈还没回消息，今天是不是特别累？'],
-      variantIndex: 0,
-      thinking: '【内心理智】她平时这个点早就在跟我分享下班日常了，今天却整整晚了两个小时，手头的事情应该很棘手。\n【潜意识情绪】有些心疼，但又怕贸然问太多显得过分越界，压下心头那点莫名的焦躁。\n【回复策略】先用一句平稳关切的问候开启对话，留出让她喘息的余地。',
-      showThinking: false,
-      text: '你今天好像一直在忙。',
-      time: '20:31',
-    },
-    { id: 2, sender: 'me', text: '嗯，刚刚才闲下来。', time: '20:32' },
-    {
-      id: 3,
-      sender: 'other',
-      variants: [
-        '那就先休息一会儿。\n不急着做别的。',
-        '快去洗个热水澡，别再看屏幕了。剩下的明天再想。'
-      ],
-      variantIndex: 0,
-      thinking: '【内心理智】听她的语气明显是精力快耗尽了，这个时候任何建议都是负担。\n【潜意识情绪】想直接过去找她，但下着大雨，她肯定不想折腾。\n【回复策略】给予最纯粹的安全感与允许停顿的空间，不催促，不给压力。',
-      showThinking: false,
-      text: '那就先休息一会儿。\n不急着做别的。',
-      time: '20:33',
-    },
-    {
-      id: 4,
-      sender: 'other',
-      type: 'ai-card',
-      category: 'image',
-      title: '文字图片',
-      descTitle: '图片描述',
-      desc: '夜晚的东京街头，便利店门口，一个穿深色外套的年轻男人站在雨里……',
-      time: '20:34',
-    },
-    {
-      id: 5,
-      sender: 'other',
-      type: 'voice',
-      duration: '0:08',
-      transcript: '“其实我也没做什么，只是刚好想和你说句话。”',
-      time: '20:35',
-    },
-  ]);
+  const [messages, setMessages] = usePersistentState<any[]>(
+    `line:conversation:${contactName}`,
+    getInitialChatMessages(contactName),
+  );
 
   // Sheets & Overlays
   const [showPlusSheet, setShowPlusSheet] = useState(false);
