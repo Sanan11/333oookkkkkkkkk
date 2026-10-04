@@ -5,6 +5,7 @@ export interface CharacterMemoryItem {
   createdAt: string;
   updatedAt: string;
   importance: number;
+  kind?: 'fact' | 'diary' | 'relationship' | 'preference' | 'event';
 }
 
 export interface CharacterMemory {
@@ -77,6 +78,7 @@ export function addCharacterMemoryItem(
   options?: {
     source?: CharacterMemoryItem['source'];
     importance?: number;
+    kind?: CharacterMemoryItem['kind'];
   },
 ): CharacterMemory {
   const trimmed = content.trim();
@@ -101,6 +103,7 @@ export function addCharacterMemoryItem(
     createdAt: now,
     updatedAt: now,
     importance: options?.importance ?? 50,
+    kind: options?.kind || 'fact',
   };
 
   return saveCharacterMemory({
