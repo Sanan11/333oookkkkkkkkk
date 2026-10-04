@@ -13,6 +13,7 @@ import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
 import { getLineGroupByName } from '../../store/lineGroups';
 import { getGroupPreset, getGroupPresets } from '../../store/groupPresets';
+import { getLineGroups } from '../../store/lineGroups';
 import { createTogetherMusicSession, type TogetherMusicSession } from '../../store/togetherMusic';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
@@ -212,6 +213,11 @@ export function LineConversationView({
     .map(member => ({ member, character: importedCharacters.find(character => character.id === member.characterId || character.name === member.name) || null }))
     .filter(item => item.character && item.member.name !== currentUserNameFallback()) || [];
   const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
+  const [lineFriends] = usePersistentState<Array<{ name: string; characterId?: string; note?: string; online?: boolean; pinyin?: string }>>('line:friends-list', []);
+  const forwardRecipients = Array.from(new Set([
+    ...lineFriends.map(friend => friend.name).filter(Boolean),
+    ...getLineGroups().filter(group => group.id !== activeGroup?.id).map(group => group.name).filter(Boolean),
+  ]));
   const characterMemory = getCharacterMemory(importedCharacter?.id || contactName, contactName);
   const projectManifest = getProjectManifest();
 
@@ -1108,17 +1114,20 @@ export function LineConversationView({
 
   // AI 推演群聊人际关系网
   const handleAiInferGroupRelations = () => {
-    showToast('AI 正在结合群聊记忆与世界书推演成员关系网络……');
-    setTimeout(() => {
-      setGroupRelationships([
-        { from: 'Aki', to: 'Haruka', relation: '摄影展筹备搭档 · 互相督促' },
-        { from: 'Aki', to: '我', relation: '最信任的发小 · 恋爱参谋' },
-        { from: '顾言', to: '我', relation: '心照不宣的双向奔赴 · 专属偏爱' },
-        { from: 'Emma', to: '大家', relation: '跨国旅行组织者 · 气氛担当' },
-        { from: '林安', to: '顾言', relation: '工作室合伙人 · 洞察顾言的心思' },
-      ]);
-      showToast('群聊人物关系网已根据最新记忆更新 ✨');
-    }, 1000);
+    if (groupAiMembers.length < 2) {
+      showToast('当前群聊至少需要两名角色，才能推演人物关系网络');
+      return;
+    }
+    showToast('正在结合当前群成员、聊天记录与世界书推演关系网络……');
+    window.setTimeout(() => {
+      const inferred = groupAiMembers.slice(0, 6).map((item, index) => ({
+        from: item.member.name,
+        to: index === 0 ? '我' : groupAiMembers[index - 1].member.name,
+        relation: '待继续推演',
+      }));
+      setGroupRelationships(inferred);
+      showToast('已基于当前群成员建立关系网络框架');
+    }, 600);
   };
 
   // 表情回应 (Reaction)
@@ -1609,12 +1618,12 @@ export function LineConversationView({
       </div>
 
       {/* Group Notice Banner (群公告折叠栏) */}
-      {(isGroup || contactName === '我们的小角落') && showGroupNotice && (
+      {isGroup && showGroupNotice && groupNoticeText.trim() && (
         <div className="bg-[#faf4f6] border-b border-[#f0dee3] px-3.5 py-1.5 flex items-center justify-between text-[11px] text-[#8c5f6b] animate-in slide-in-from-top">
           <div className="flex items-center gap-1.5 truncate">
             <span>📢</span>
             <span className="font-semibold">群公告：</span>
-            <span className="truncate">周末大家聚会，地点定在原宿下北泽唱片咖啡馆，不见不散~</span>
+            <span className="truncate">{groupNoticeText}</span>
           </div>
           <button
             onClick={() => setShowGroupNotice(false)}
@@ -4254,7 +4263,7 @@ export function LineConversationView({
             <div className="font-semibold text-sm text-[#333]">转发给好友</div>
 
             <div className="divide-y divide-[#f2f2f4] text-xs">
-              {['小夏', 'Haruka', '林安', 'Emma', '我们的小角落'].map((f, i) => (
+              {forwardRecipients.map((f, i) => (
                 <div
                   key={i}
                   onClick={() => {
