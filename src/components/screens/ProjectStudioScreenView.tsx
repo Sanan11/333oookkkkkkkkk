@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Database, Download, FileText, KeyRound, Save, Settings2, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Database, Download, FileText, KeyRound, Save, Settings2, Sparkles, Users } from 'lucide-react';
 import type { ProjectManifest, ScreenType, WorldBook } from '../../types';
 import type { ImportedCharacter } from '../../data/characterImport';
 import { usePersistentState } from '../../store/usePersistentState';
 import { DEFAULT_PROJECT_MANIFEST, saveProjectManifest } from '../../store/projectManifest';
 import { getCharacterMemory } from '../../store/characterMemory';
+import { generateCreativeText, readStoredAiSettings } from '../../ai/aiEngine';
 
 interface PersonaItem {
   id: string;
@@ -40,6 +41,13 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
   const [personas] = usePersistentState<PersonaItem[]>('line:user-personas', []);
   const [notice, setNotice] = useState('');
   const [openSection, setOpenSection] = useState<'project' | 'context' | 'data'>('project');
+  const [assistantPrompt, setAssistantPrompt] = useState('');
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const [assistantProposal, setAssistantProposal] = useState<{
+    message: string;
+    projectPatch?: Partial<Pick<ProjectManifest, 'name' | 'subtitle' | 'description' | 'genre' | 'language' | 'tone' | 'globalPrompt'>>;
+    characterPatch?: Partial<Pick<ImportedCharacter, 'description' | 'personality' | 'scenario' | 'firstMessage' | 'exampleDialogue' | 'creatorNotes' | 'systemPrompt' | 'postHistoryInstructions' | 'tags'>>;
+  } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   const activeCharacter = characters.find(item => item.id === manifest.activeCharacterId) || null;
@@ -53,6 +61,128 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
   const patch = (next: Partial<ProjectManifest>) => {
     const saved = saveProjectManifest(next);
     setManifest(saved);
+  };
+
+  const askProjectAssistant = async () => {
+    const request = assistantPrompt.trim();
+    if (!request || assistantBusy) return;
+
+    const settings = readStoredAiSettings();
+    if (!settings.apiKey.trim()) {
+      notify('请先在设置里配置聊天 API');
+      return;
+    }
+
+    setAssistantBusy(true);
+    setAssistantProposal(null);
+
+    const activeCharacterSnapshot = activeCharacter ? {
+      name: activeCharacter.name,
+      description: activeCharacter.description,
+      personality: activeCharacter.personality,
+      scenario: activeCharacter.scenario,
+      firstMessage: activeCharacter.firstMessage,
+      exampleDialogue: activeCharacter.exampleDialogue,
+      creatorNotes: activeCharacter.creatorNotes,
+      systemPrompt: activeCharacter.systemPrompt,
+      postHistoryInstructions: activeCharacter.postHistoryInstructions,
+      tags: activeCharacter.tags,
+    } : null;
+
+    const systemPrompt = [
+      '你是 Sane333 的项目编辑助手。',
+      '用户希望修改当前私人虚拟手机项目。你要基于现有资料提出精确、可执行的结构化修改。',
+      '只修改项目设定和当前默认角色允许编辑的文字字段；不要创建虚假的角色，不要删除数据，不要修改 ID。',
+      '必须返回严格 JSON，不要 Markdown，不要代码围栏。',
+      'JSON 格式必须是：',
+      JSON.stringify({
+        message: '一句中文说明这次修改想达到什么效果',
+        projectPatch: {
+          name: '可选；没有修改就省略',
+          subtitle: '可选',
+          description: '可选',
+          genre: '可选',
+          language: '可选',
+          tone: '可选',
+          globalPrompt: '可选',
+        },
+        characterPatch: {
+          description: '可选',
+          personality: '可选',
+          scenario: '可选',
+          firstMessage: '可选',
+          exampleDialogue: '可选',
+          creatorNotes: '可选',
+          systemPrompt: '可选',
+          postHistoryInstructions: '可选',
+          tags: ['可选标签'],
+        },
+      }),
+      '如果某一部分不需要修改，使用空对象 {}。',
+    ].join('\n');
+
+    const userPrompt = [
+      '【当前项目】',
+      JSON.stringify(manifest, null, 2),
+      '',
+      '【当前默认角色】',
+      JSON.stringify(activeCharacterSnapshot, null, 2),
+      '',
+      '【当前世界书概况】',
+      JSON.stringify(worldbooks.map(book => ({
+        id: book.id,
+        name: book.name,
+        enabled: book.enabled,
+        entries: book.entries.length,
+      })), null, 2),
+      '',
+      '【用户修改要求】',
+      request,
+    ].join('\n');
+
+    try {
+      const raw = await generateCreativeText({
+        settings,
+        systemPrompt,
+        userPrompt,
+        temperature: 0.35,
+      });
+      const cleaned = raw.trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/i, '');
+      const parsed = JSON.parse(cleaned);
+
+      const proposal = {
+        message: typeof parsed?.message === 'string' ? parsed.message : 'AI 已生成一组项目修改建议。',
+        projectPatch: parsed?.projectPatch && typeof parsed.projectPatch === 'object' ? parsed.projectPatch : {},
+        characterPatch: parsed?.characterPatch && typeof parsed.characterPatch === 'object' ? parsed.characterPatch : {},
+      };
+      setAssistantProposal(proposal);
+      notify('AI 修改方案已生成，请检查后应用');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'AI 项目修改失败');
+    } finally {
+      setAssistantBusy(false);
+    }
+  };
+
+  const applyAssistantProposal = () => {
+    if (!assistantProposal) return;
+
+    if (assistantProposal.projectPatch) {
+      patch(assistantProposal.projectPatch);
+    }
+
+    if (assistantProposal.characterPatch && activeCharacter) {
+      const allowed = assistantProposal.characterPatch;
+      setCharacters(prev => prev.map(character =>
+        character.id === activeCharacter.id
+          ? { ...character, ...allowed }
+          : character
+      ));
+    }
+
+    setAssistantProposal(null);
+    setAssistantPrompt('');
+    notify('AI 修改已应用并保存到本机项目');
   };
 
   const createStarterBook = () => {
@@ -132,6 +262,47 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
           </div>
           <div className="mt-2 font-serif font-bold text-lg text-[#242323]">这个页面就是你的项目编辑器。</div>
           <p className="mt-2 text-[10px] leading-relaxed text-[#6c655e]">这里修改的内容会直接保存到本机项目，并参与后续 AI 生成。以后接 AI 编辑器时，项目级数据也可以直接从这里修改。</p>
+        </section>
+
+        <section className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
+          <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">
+            <Sparkles className="w-3.5 h-3.5 text-[#9b625b]" /> AI PROJECT ASSISTANT
+          </div>
+          <div className="mt-2 font-serif font-bold text-base text-[#292724]">直接告诉 AI，你想把项目改成什么样。</div>
+          <p className="mt-1 text-[9px] leading-relaxed text-[#7a736c]">AI 会读取当前项目和默认角色，先给出修改方案；你确认后才会真正写入。</p>
+          <textarea
+            value={assistantPrompt}
+            onChange={e => setAssistantPrompt(e.target.value)}
+            placeholder="例如：把这个项目整体调整成现代东京雨夜、克制电影感；角色说话少一点，但保留暧昧张力。"
+            className="w-full mt-2.5 min-h-[78px] bg-white/70 rounded-xl p-2.5 text-[10.5px] outline-none resize-y leading-relaxed"
+          />
+          <button
+            onClick={askProjectAssistant}
+            disabled={assistantBusy || !assistantPrompt.trim()}
+            className="mt-2.5 w-full py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5 disabled:opacity-40"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${assistantBusy ? 'animate-pulse' : ''}`} />
+            {assistantBusy ? 'AI 正在理解项目……' : '生成修改方案'}
+          </button>
+
+          {assistantProposal && (
+            <div className="mt-3 p-3 rounded-xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
+              <div className="text-[9px] font-semibold text-[#433e38]">AI 方案预览</div>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-[#5d5650]">{assistantProposal.message}</p>
+              <div className="mt-2 space-y-1 text-[8.5px] text-[#7b746d] font-mono">
+                {assistantProposal.projectPatch && Object.keys(assistantProposal.projectPatch).length > 0 && (
+                  <div>PROJECT · {Object.keys(assistantProposal.projectPatch).join(' · ')}</div>
+                )}
+                {assistantProposal.characterPatch && Object.keys(assistantProposal.characterPatch).length > 0 && (
+                  <div>CHARACTER · {Object.keys(assistantProposal.characterPatch).join(' · ')}</div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2.5">
+                <button onClick={applyAssistantProposal} className="py-2 rounded-xl bg-[#292724] text-white text-[9px]">应用修改</button>
+                <button onClick={() => setAssistantProposal(null)} className="py-2 rounded-xl bg-white/65 border border-black/5 text-[#665f58] text-[9px]">取消</button>
+              </div>
+            </div>
+          )}
         </section>
 
         <div className="grid grid-cols-3 gap-1.5">
