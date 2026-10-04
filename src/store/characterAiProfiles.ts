@@ -67,9 +67,7 @@ export function buildCharacterAiProfile(base: AiSettings, characterId: string, c
     model: base.model,
     streaming: base.streaming,
     contextLength: base.contextLength,
-    maxOutputTokens: Number(localStorage.getItem('phone:settings'))
-      ? 1200
-      : 1200,
+    maxOutputTokens: base.maxOutputTokens,
     temperature: base.temperature,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
