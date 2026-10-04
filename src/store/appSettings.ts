@@ -20,6 +20,13 @@ export interface AppSettings {
   voiceFormat: 'mp3' | 'wav' | 'ogg';
   autoSpeakAiReplies: boolean;
 
+  sttEnabled: boolean;
+  sttProvider: 'browser' | 'openai-compatible' | 'custom';
+  sttBaseUrl: string;
+  sttApiKey: string;
+  sttModel: string;
+  sttLanguage: string;
+
   imageEnabled: boolean;
   imageProvider: 'openai-compatible' | 'custom';
   imageBaseUrl: string;
@@ -52,6 +59,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   voiceName: 'alloy',
   voiceFormat: 'mp3',
   autoSpeakAiReplies: false,
+
+  sttEnabled: false,
+  sttProvider: 'openai-compatible',
+  sttBaseUrl: '',
+  sttApiKey: '',
+  sttModel: 'gpt-4o-mini-transcribe',
+  sttLanguage: 'zh',
 
   imageEnabled: false,
   imageProvider: 'openai-compatible',
