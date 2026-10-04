@@ -379,12 +379,15 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                       <label className="block text-[8px] text-[#8b8782]">Model
                         <input value={selectedCharacterAi.model} onChange={e => createOrUpdateCharacterAi({ model: e.target.value })} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[9px] font-mono outline-none" />
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Temperature
                           <input type="number" step="0.05" min="0" max="2" value={selectedCharacterAi.temperature} onChange={e => createOrUpdateCharacterAi({ temperature: Math.max(0, Math.min(2, Number(e.target.value) || 0.85)) })} className="w-full mt-1 bg-transparent outline-none text-xs font-mono text-[#4a4540]" />
                         </label>
                         <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Context
                           <input type="number" min="4" max="200" value={selectedCharacterAi.contextLength} onChange={e => createOrUpdateCharacterAi({ contextLength: Math.max(4, Math.min(200, Number(e.target.value) || 24)) })} className="w-full mt-1 bg-transparent outline-none text-xs font-mono text-[#4a4540]" />
+                        </label>
+                        <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Max output
+                          <input type="number" min="128" max="12000" value={selectedCharacterAi.maxOutputTokens} onChange={e => createOrUpdateCharacterAi({ maxOutputTokens: Math.max(128, Math.min(12000, Number(e.target.value) || 1200)) })} className="w-full mt-1 bg-transparent outline-none text-xs font-mono text-[#4a4540]" />
                         </label>
                       </div>
                       <button onClick={() => createOrUpdateCharacterAi({
