@@ -15,6 +15,7 @@ import { getLineGroupByName } from '../../store/lineGroups';
 import { getGroupPreset, getGroupPresets } from '../../store/groupPresets';
 import { getLineGroups } from '../../store/lineGroups';
 import { createTogetherMusicSession, type TogetherMusicSession } from '../../store/togetherMusic';
+import { emitWorldEvent, setCharacterRuntime } from '../../store/worldRuntime';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -693,6 +694,19 @@ export function LineConversationView({
       );
 
       window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'message' } }));
+
+      if (importedCharacter) {
+        setCharacterRuntime(importedCharacter.id, {
+          activity: '正在与你聊天',
+          mood: '注意力在你身上',
+          lastInteractionAt: new Date().toISOString(),
+        }, importedCharacter.name);
+        emitWorldEvent('relationship.changed', {
+          characterId: importedCharacter.id,
+          characterName: importedCharacter.name,
+          data: { source: 'chat', reason: 'conversation-replied' },
+        });
+      }
 
       if (result.matchedWorldbookEntries > 0) {
         showToast(`AI 已读取 ${result.matchedWorldbookEntries} 条命中的世界书设定 ✦`);
