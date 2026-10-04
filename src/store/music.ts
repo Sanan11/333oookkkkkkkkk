@@ -18,6 +18,7 @@ export interface MusicApiSettings {
   songPath: string;
   playlistPath: string;
   urlPath: string;
+  searchParam: 'keyword' | 'keywords';
 }
 
 export interface CharacterPlaylist {
@@ -32,6 +33,7 @@ export interface CharacterPlaylist {
 
 export interface MusicStrangerSession {
   id: string;
+  mode: 'direct' | 'stranger';
   characterId: string;
   characterName: string;
   variantLabel?: string;
@@ -50,6 +52,7 @@ export const DEFAULT_MUSIC_API_SETTINGS: MusicApiSettings = {
   songPath: '/song',
   playlistPath: '/playlist',
   urlPath: '/url',
+  searchParam: 'keyword',
 };
 
 const MUSIC_SETTINGS_KEY = 'phone:music-api-settings';
@@ -192,7 +195,7 @@ function normalizeTrack(raw: any, settings: MusicApiSettings): MusicTrack {
 export async function searchMusic(keyword: string, settings = readMusicApiSettings()): Promise<MusicTrack[]> {
   if (!settings.baseUrl.trim()) throw new Error('请先填写网易云 Music API Base URL');
   const url = new URL(joinUrl(settings.baseUrl, settings.searchPath), window.location.origin);
-  url.searchParams.set(settings.provider === 'netease' && settings.searchPath.includes('music/v1') ? 'keyword' : 'keywords', keyword);
+  url.searchParams.set(settings.searchParam, keyword);
   url.searchParams.set('limit', '30');
   const payload = await fetchJson(url.toString());
   return extractItems(payload).map(item => normalizeTrack(item, settings)).filter(track => track.id);
