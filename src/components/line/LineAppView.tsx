@@ -18,7 +18,7 @@ interface LineAppViewProps {
 export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   // Tabs: 'chat' | 'friends' | 'moments' | 'me'
   const [activeTab, setActiveTab] = useState<'chat' | 'friends' | 'moments' | 'me'>('chat');
-  const [activeChatName, setActiveChatName] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   // Search queries
   const [chatSearch, setChatSearch] = useState('');
@@ -190,12 +190,14 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     if (!importedCharacters.length) return;
 
     setChatItems(prev => {
-      const existing = new Set(prev.map(item => item.name));
+      const existingCharacterIds = new Set(prev.map(item => item.characterId).filter(Boolean));
       const added = importedCharacters
-        .filter(character => !existing.has(character.name))
+        .filter(character => !existingCharacterIds.has(character.id) && !prev.some(item => item.name === character.name && item.id === character.id))
         .map(character => ({
           id: character.id,
+          characterId: character.id,
           name: character.name,
+          variantLabel: character.variantLabel || character.characterVersion || '默认版本',
           time: '刚刚',
           preview: character.firstMessage || character.description || '新导入角色，等待你的消息。',
           unread: 0,
@@ -209,11 +211,13 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     });
 
     setFriendsList(prev => {
-      const existing = new Set(prev.map(friend => friend.name));
+      const existingIds = new Set(prev.map(friend => friend.characterId).filter(Boolean));
       const added = importedCharacters
-        .filter(character => !existing.has(character.name))
+        .filter(character => !existingIds.has(character.id))
         .map(character => ({
           name: character.name,
+          characterId: character.id,
+          variantLabel: character.variantLabel || character.characterVersion || '默认版本',
           note: character.description || '已导入角色卡',
           online: false,
           pinyin: character.name.slice(0, 1).toUpperCase(),
@@ -305,19 +309,24 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   });
 
   // If a chat is open, render the detail view
-  if (activeChatName) {
-    const activeItem = chatItems.find((c) => c.name === activeChatName);
+  if (activeChatId) {
+    const activeItem = chatItems.find((c) => c.id === activeChatId);
+    const activeChatName = activeItem?.name || activeChatId;
+    const activeCharacterId = activeItem?.characterId || undefined;
+    const conversationId = activeItem?.isGroup ? activeItem.id : activeCharacterId || activeItem?.name || activeChatId;
     return (
       <div className="w-full h-full pt-[30px] bg-white">
         <LineConversationView
           contactName={activeChatName}
+          characterId={activeCharacterId}
+          conversationId={conversationId}
           onBack={(draft?: string) => {
             if (typeof draft === 'string') {
               setChatItems((prev) =>
-                prev.map((c) => (c.name === activeChatName ? { ...c, draft } : c))
+                prev.map((c) => (c.id === activeChatId ? { ...c, draft } : c))
               );
             }
-            setActiveChatName(null);
+            setActiveChatId(null);
           }}
           onNavigateHome={onNavigateHome}
           initialDraft={activeItem?.draft || ''}
@@ -336,14 +345,14 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
           onTogglePin={() => {
             setChatItems((prev) =>
               prev.map((c) =>
-                c.name === activeChatName ? { ...c, isPinned: !c.isPinned } : c
+                c.id === activeChatId ? { ...c, isPinned: !c.isPinned } : c
               )
             );
           }}
           onToggleMute={() => {
             setChatItems((prev) =>
               prev.map((c) =>
-                c.name === activeChatName ? { ...c, isMuted: !c.isMuted } : c
+                c.id === activeChatId ? { ...c, isMuted: !c.isMuted } : c
               )
             );
           }}
@@ -413,7 +422,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                   setChatItems((prev) =>
                     prev.map((c) => (c.id === item.id ? { ...c, unread: 0 } : c))
                   );
-                  setActiveChatName(item.name);
+                  setActiveChatId(item.id);
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -428,9 +437,9 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                 {/* Default Avatar SVG from template */}
                 <div className="relative">
                   <div className="w-[49px] h-[49px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
-                    {importedCharacters.find(character => character.name === item.name)?.avatar ? (
+                    {importedCharacters.find(character => character.id === item.characterId)?.avatar || importedCharacters.find(character => character.name === item.name)?.avatar ? (
                       <img
-                        src={importedCharacters.find(character => character.name === item.name)?.avatar}
+                        src={importedCharacters.find(character => character.id === item.characterId)?.avatar || importedCharacters.find(character => character.name === item.name)?.avatar}
                         alt={item.name}
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
@@ -452,9 +461,8 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                 <div className="flex-1 min-w-0 ml-3">
                   <div className="flex justify-between items-center mb-1">
                     <div className="flex items-center gap-1.5 truncate">
-                      <span className="text-[14px] font-semibold text-[#28292b]">
-                        {item.name}
-                      </span>
+                      <span className="text-[14px] font-semibold text-[#28292b]">{item.name}</span>
+                      {item.variantLabel && !item.isGroup && <span className="text-[8px] text-[#a69da0] shrink-0">· {item.variantLabel}</span>}
                       {item.isMuted && (
                         <BellOff className="w-3 h-3 text-[#b2b2b4] shrink-0" />
                       )}
