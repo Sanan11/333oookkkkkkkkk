@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePersistentState } from '../../store/usePersistentState';
+import type { ImportedCharacter } from '../../data/characterImport';
 import { usePersistentState } from '../../store/usePersistentState';
 import { ScreenType } from '../../types';
 import { LineConversationView } from './LineConversationView';
@@ -73,6 +75,8 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   const [isRefreshingMoments, setIsRefreshingMoments] = useState(false);
 
   // User / Mask State
+  const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
+
   const [currentUser, setCurrentUser] = usePersistentState('line:current-user', {
     name: 'Coral',
     id: 'coral_01',
@@ -166,6 +170,44 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
       isGroup: true,
     },
   ]);
+
+  // Imported character cards automatically become LINE contacts.
+  useEffect(() => {
+    if (!importedCharacters.length) return;
+
+    setChatItems(prev => {
+      const existing = new Set(prev.map(item => item.name));
+      const added = importedCharacters
+        .filter(character => !existing.has(character.name))
+        .map(character => ({
+          id: character.id,
+          name: character.name,
+          time: '刚刚',
+          preview: character.firstMessage || character.description || '新导入角色，等待你的消息。',
+          unread: 0,
+          isPinned: false,
+          isMuted: false,
+          draft: '',
+          isGroup: false,
+        }));
+
+      return added.length ? [...added, ...prev] : prev;
+    });
+
+    setFriendsList(prev => {
+      const existing = new Set(prev.map(friend => friend.name));
+      const added = importedCharacters
+        .filter(character => !existing.has(character.name))
+        .map(character => ({
+          name: character.name,
+          note: character.description || '已导入角色卡',
+          online: false,
+          pinyin: character.name.slice(0, 1).toUpperCase(),
+        }));
+
+      return added.length ? [...added, ...prev] : prev;
+    });
+  }, [importedCharacters]);
 
   // Global Favorites storage
   const [globalFavorites, setGlobalFavorites] = usePersistentState('line:global-favorites', [
