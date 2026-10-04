@@ -22,6 +22,10 @@ export interface CharacterRuntimeState {
   lastSeenAt: string;
   lastInteractionAt: string | null;
   unread: number;
+  currentScheduleId?: string | null;
+  currentScheduleTitle?: string;
+  nextActionAt?: string | null;
+  nextActionTitle?: string;
 }
 
 export interface WorldRuntimeState {
@@ -83,6 +87,10 @@ function ensureCharacter(state: WorldRuntimeState, character: ImportedCharacter 
     lastSeenAt: new Date().toISOString(),
     lastInteractionAt: null,
     unread: 0,
+    currentScheduleId: null,
+    currentScheduleTitle: '',
+    nextActionAt: null,
+    nextActionTitle: '',
   };
   return state.characters[character.id];
 }
@@ -174,6 +182,45 @@ export function setCharacterRuntime(
   const character = ensureCharacter(state, { id: characterId, name: name || characterId });
   Object.assign(character, patch);
   state.updatedAt = new Date().toISOString();
+  writeState(state);
+  window.dispatchEvent(new CustomEvent('sane333:world-state-changed', { detail: state }));
+}
+
+export function syncCharacterRoutine(
+  character: ImportedCharacter,
+  schedule: Array<{ id: string; time: string; title: string }>,
+  now = new Date(),
+) {
+  if (typeof window === 'undefined') return;
+  const state = readState();
+  const runtime = ensureCharacter(state, character);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const parse = (value: string) => {
+    const match = value.match(/(\\d{1,2}):(\\d{2})/);
+    if (!match) return null;
+    const h = Number(match[1]);
+    const m = Number(match[2]);
+    return h <= 23 && m <= 59 ? h * 60 + m : null;
+  };
+  const ordered = schedule
+    .map(item => ({ item, minute: parse(item.time) }))
+    .filter((x): x is { item: typeof schedule[number]; minute: number } => x.minute !== null)
+    .sort((a, b) => a.minute - b.minute);
+
+  if (!ordered.length) return;
+  const due = ordered.filter(x => x.minute <= currentMinutes);
+  const current = due.length ? due[due.length - 1] : null;
+  const next = ordered.find(x => x.minute > currentMinutes) || ordered[0];
+
+  if (current) {
+    runtime.currentScheduleId = current.item.id;
+    runtime.currentScheduleTitle = current.item.title;
+    runtime.activity = current.item.title;
+  }
+  runtime.nextActionAt = next.item.time;
+  runtime.nextActionTitle = next.item.title;
+  runtime.lastSeenAt = now.toISOString();
+  state.updatedAt = now.toISOString();
   writeState(state);
   window.dispatchEvent(new CustomEvent('sane333:world-state-changed', { detail: state }));
 }
