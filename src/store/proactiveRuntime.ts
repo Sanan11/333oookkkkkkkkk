@@ -128,7 +128,10 @@ async function generateProactiveMessage(
   const worldbooks = readLocal<WorldBook[]>('phone:worldbooks', []);
   const personas = readLocal<any[]>('line:user-personas', []);
   const persona = personas.find(item => item.isDefault) || personas[0] || null;
-  const recentMessages = readLocal<any[]>(`line:conversation:${character.name}`, []).slice(-12);
+  const recentMessages = [
+    ...readLocal<any[]>(`line:conversation:${character.id || character.name}`, []),
+    ...(character.id ? readLocal<any[]>(`line:conversation:${character.name}`, []) : []),
+  ].slice(-12);
 
   const systemPrompt = [
     '你是 Sane333 的主动消息引擎。',
