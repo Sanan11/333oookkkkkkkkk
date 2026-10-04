@@ -16,6 +16,9 @@ import { getGroupPreset, getGroupPresets } from '../../store/groupPresets';
 import { getLineGroups } from '../../store/lineGroups';
 import { createTogetherMusicSession, type TogetherMusicSession } from '../../store/togetherMusic';
 import { emitWorldEvent, setCharacterRuntime } from '../../store/worldRuntime';
+import { getStatusBarPresets, type StatusBarPreset } from '../../store/statusBarPresets';
+import { getCotPresets, type CotPreset } from '../../store/cotPresets';
+import { PresetResourceManager } from './PresetResourceManager';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -235,62 +238,8 @@ export function LineConversationView({
 
   // 酒馆思维链预设系统 (Chain of Thought Presets)
   const [showCotPresetModal, setShowCotPresetModal] = useState(false);
-  const [cotPresets, setCotPresets] = usePersistentState('line:cot-presets', [
-    {
-      id: 'cot-1',
-      title: '深度心理侧写与情感博弈预设',
-      tag: '<think>...</think>',
-      description: '酒馆经典深度预设，在回复前剖析心理防御机制、潜意识情感博弈与微策略。',
-      template: `在每次发言前，必须严格在 <think> 标签内进行角色心理活动推理，格式如下：
-【情境感知】：分析当前用户话语中的潜台词与情绪状态
-【内心欲念】：角色未说出口的真实想法、占有欲与压抑冲动
-【好感权衡】：基于当前羁绊阶段计算情感暴露尺度
-【台词策略】：决定表面上的语气、言语留白与肢体动作`,
-      exampleThinking: `【情境感知】她回复比平时晚了，言语虽轻快但透着疲惫。
-【内心欲念】很想立刻开车去见她，把她拥在怀里，但怕她觉得压力过重。
-【好感权衡】好感度已达 92，可以适当展现更具保护欲与专属感的关心。
-【台词策略】语气沉稳温和，不催促追问，留出充分的安全边界。`,
-    },
-    {
-      id: 'cot-2',
-      title: '潜意识与生理微反应预设',
-      tag: '<thought>...</thought>',
-      description: '注重身体机能、心跳波动、视线回避与无意识的小动作。',
-      template: `在输出前，在 <think> 标签内记录角色的生理应激与潜意识反应：
-[生理机能]：心率、呼吸节律、喉结滑动或手指动作
-[潜意识回音]：最本能的第一反应
-[理性拦截]：理智对本能反应的修正与包装`,
-      exampleThinking: `[生理机能] 指尖不由自主摩挲着咖啡杯边缘，视线在屏幕消息上停顿了整整三秒。
-[潜意识回音] 听到她说累的一瞬间，胸口像被扯了一下，只想让她完全依靠我。
-[理性拦截] 不能表现得太急切，必须克制声音里的波澜。`,
-    },
-    {
-      id: 'cot-3',
-      title: '高岭之花·克制隐忍暗涌预设',
-      tag: '<think>...</think>',
-      description: '适合禁欲系、高傲或克制隐忍角色，表面极度冷静冷淡，思维链却暗流翻涌。',
-      template: `在 <think> 标签内推演角色的理智防线与暗流：
-1. 观察对方给出的刺激点
-2. 筑起理智的高墙与防御说辞
-3. 防线上微不可察的动摇裂痕与妥协`,
-      exampleThinking: `1. 她向我示弱了。这很罕见。
-2. 我应当提醒她注意边界，毕竟公私分明才是最安全的相处方式。
-3. ……罢了。今晚例外一次，谁让我心软了。`,
-    },
-    {
-      id: 'cot-4',
-      title: '甜蜜宠溺与无条件偏爱预设',
-      tag: '<think>...</think>',
-      description: '满分情绪价值，角色的一切思维完全以偏爱、治愈和保护对方为核心。',
-      template: `在 <think> 标签内展示角色的宠溺心理：
-- 对她的心疼与偏爱
-- 怎么做才能让她开心舒服
-- 语言上的温暖包裹`,
-      exampleThinking: `- 看到她说累，恨不得替她承受所有的忙碌。
-- 明天一定要给她带她最喜欢的草莓大福和热可可。
-- 先哄她好好睡觉，其他什么都不重要。`,
-    },
-  ]);
+  const [showPresetResourceManager, setShowPresetResourceManager] = useState<'status' | 'cot' | null>(null);
+  const [cotPresets, setCotPresets] = usePersistentState<CotPreset[]>('line:cot-presets', getCotPresets());
   const [activeCotPresetId, setActiveCotPresetId] = usePersistentState(`line:cot-active:${conversationStorageId}`, 'cot-1');
   const activeCotPreset = cotPresets.find((p) => p.id === activeCotPresetId) || cotPresets[0];
   const [customCotTemplate, setCustomCotTemplate] = usePersistentState(`line:cot-custom:${conversationStorageId}`, activeCotPreset.template);
@@ -316,6 +265,8 @@ export function LineConversationView({
     '<div class="tavern-status"><span class="badge">📍 {{location}}</span> <span class="badge">🕒 {{time}}</span> <span class="badge">📖 {{activity}}</span> <span class="badge-pink">💖 好感度 {{favor}}</span><div class="mood">心境：{{mood}}</div></div>'
   );
   const [statusTab, setStatusTab] = useState<'preview' | 'regex' | 'format'>('preview');
+  const [statusBarPresets, setStatusBarPresets] = usePersistentState<StatusBarPreset[]>('line:status-bar-presets', getStatusBarPresets());
+  const [activeStatusBarPresetId, setActiveStatusBarPresetId] = usePersistentState(`line:status-bar-active:${conversationStorageId}`, statusBarPresets[0]?.id || 'status-minimal');
 
   // 角色个人主页 (Threads / Twitter / LINE 混合风格)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false);
@@ -367,6 +318,36 @@ export function LineConversationView({
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingDiscardRef = useRef(false);
+  const avatarClickTimerRef = useRef<number | null>(null);
+
+  const handleMessageAvatarClick = () => {
+    if (avatarClickTimerRef.current) window.clearTimeout(avatarClickTimerRef.current);
+    avatarClickTimerRef.current = window.setTimeout(() => {
+      setShowRenderedStatusBarModal(true);
+      avatarClickTimerRef.current = null;
+    }, 260);
+  };
+
+  const handleMessageAvatarDoubleClick = (name: string) => {
+    if (avatarClickTimerRef.current) window.clearTimeout(avatarClickTimerRef.current);
+    avatarClickTimerRef.current = null;
+    handleNudge(name);
+  };
+
+  const applyStatusBarPreset = (preset: StatusBarPreset) => {
+    setActiveStatusBarPresetId(preset.id);
+    setStatusFormat(preset.html);
+    setStatusRegex(preset.regex);
+    setShowPresetResourceManager(null);
+    showToast(`已应用状态栏：${preset.name}`);
+  };
+
+  const applyCotPreset = (preset: CotPreset) => {
+    setActiveCotPresetId(preset.id);
+    setCustomCotTemplate(preset.template);
+    setShowPresetResourceManager(null);
+    showToast(`已应用思维链预设：${preset.title}`);
+  };
 
   const showToast = (text: string) => {
     setToastMsg(text);
@@ -1556,16 +1537,13 @@ export function LineConversationView({
                 ‹
               </button>
 
-              {/* Avatar & Info (点击头像弹出渲染好的状态栏，点击名字查看主页，双击拍一拍) */}
-              <div
-                onClick={() => setShowRenderedStatusBarModal(true)}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  handleNudge(characterProfile.nickname);
-                }}
-                className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
-                title="单击查看渲染状态栏，双击拍一拍"
-              >
+              {/* 顶部大头像：只进入角色完整个人主页。状态栏/拍一拍只属于消息气泡里的小头像。 */}
+              <div className="flex items-center gap-2.5 min-w-0 group">
+                <button
+                  onClick={() => setShowCharacterProfile(true)}
+                  className="relative cursor-pointer"
+                  title="打开角色个人主页"
+                >
                 <div className="relative">
                   <div className={`w-[38px] h-[38px] rounded-full bg-[#f1f1f2] border border-[#ededee] flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 group-hover:ring-2 group-hover:ring-[#d4aab5]/50 transition-all ${
                     nudgeAvatar ? 'scale-110 ring-2 ring-[#d4aab5]' : ''
@@ -1580,7 +1558,8 @@ export function LineConversationView({
                     )}
                   </div>
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#b9d2c1] border border-white" />
-                </div>
+                  </div>
+                </button>
 
                 <div
                   onClick={(e) => {
@@ -1801,17 +1780,17 @@ export function LineConversationView({
                     if (isGroup) {
                       setInputText((prev) => `${prev}@${msg.senderName || characterProfile.nickname} `);
                     } else {
-                      setShowRenderedStatusBarModal(true);
+                      handleMessageAvatarClick();
                     }
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
-                    handleNudge(characterProfile.nickname);
+                    handleMessageAvatarDoubleClick(msg.senderName || characterProfile.nickname);
                   }}
                   className={`w-[31px] h-[31px] rounded-full bg-[#f2f2f3] flex items-center justify-center overflow-hidden shrink-0 self-start mt-0.5 cursor-pointer hover:opacity-80 active:scale-95 transition-all ${
                     nudgeAvatar ? 'scale-110 ring-2 ring-[#d4aab5]' : ''
                   }`}
-                  title={isGroup ? `单击@${msg.senderName || characterProfile.nickname}，双击拍一拍` : '单击查看状态栏与个人主页，双击拍一拍'}
+                  title={isGroup ? `单击@${msg.senderName || characterProfile.nickname}，双击拍一拍` : '单击打开状态卡，双击拍一拍'}
                 >
                   {(isGroup ? importedCharacters.find(character => character.name === msg.senderName)?.avatar : importedCharacter?.avatar) ? (
                     <img src={(isGroup ? importedCharacters.find(character => character.name === msg.senderName)?.avatar : importedCharacter?.avatar) || ''} alt={msg.senderName || characterProfile.nickname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -3137,12 +3116,12 @@ export function LineConversationView({
               <button
                 onClick={() => {
                   setShowRenderedStatusBarModal(false);
-                  setShowSettings(true);
+                  setShowPresetResourceManager('status');
                 }}
                 className="text-[11px] text-[#888] hover:text-[#ae7e89] flex items-center gap-1 cursor-pointer"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>配置状态栏格式与正则表达式 ›</span>
+                <span>管理全部状态栏 / 导入导出 ›</span>
               </button>
               <button
                 onClick={() => setShowRenderedStatusBarModal(false)}
@@ -3920,6 +3899,21 @@ export function LineConversationView({
         </div>
       )}
 
+      {showPresetResourceManager && (
+        <PresetResourceManager
+          kind={showPresetResourceManager}
+          statusPresets={statusBarPresets}
+          setStatusPresets={setStatusBarPresets}
+          cotPresets={cotPresets}
+          setCotPresets={setCotPresets}
+          activeStatusId={activeStatusBarPresetId}
+          activeCotId={activeCotPresetId}
+          onApplyStatus={applyStatusBarPreset}
+          onApplyCot={applyCotPreset}
+          onClose={() => setShowPresetResourceManager(null)}
+        />
+      )}
+
       {/* 14.5. TAVERN COT PRESET MANAGER MODAL (思维链预设管理器) */}
       {showCotPresetModal && (
         <div className="absolute inset-0 bg-white z-50 flex flex-col animate-in slide-in-from-bottom">
@@ -3931,7 +3925,7 @@ export function LineConversationView({
               <div className="font-semibold text-sm text-[#333]">思维链预设 (CoT Presets)</div>
               <div className="text-[9px] text-[#aaa]">SillyTavern 风格思考模板与心理引导</div>
             </div>
-            <div className="w-8" />
+            <button onClick={() => { setShowCotPresetModal(false); setShowPresetResourceManager('cot'); }} className="px-2 py-1 rounded-lg bg-[#f8f4f5] text-[#ae7e89] text-[9px] border border-[#f0dee3]">管理 / 导入导出</button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs pb-10">
