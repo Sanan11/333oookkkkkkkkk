@@ -99,6 +99,21 @@ export function getWorldRuntime(): WorldRuntimeState {
   return readState();
 }
 
+export function getWorldUnreadCount(): number {
+  return Object.values(readState().characters).reduce((sum, character) => sum + character.unread, 0);
+}
+
+export function markCharacterRead(characterId: string) {
+  if (typeof window === 'undefined') return;
+  const state = readState();
+  const character = state.characters[characterId];
+  if (!character) return;
+  character.unread = 0;
+  state.updatedAt = new Date().toISOString();
+  writeState(state);
+  window.dispatchEvent(new CustomEvent('sane333:world-state-changed', { detail: state }));
+}
+
 export function emitWorldEvent(
   type: WorldEventType,
   payload: {
