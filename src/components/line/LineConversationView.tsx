@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
-import type { WorldBook } from '../../types';
+import type { ScreenType, WorldBook } from '../../types';
 import { generateCharacterReply, generateCreativeText, readStoredAiSettings, summarizeConversationMemory } from '../../ai/aiEngine';
 import { generateImage, generateSpeech, transcribeAudio } from '../../ai/mediaEngine';
 import { readAppSettings } from '../../store/appSettings';
@@ -54,6 +54,7 @@ interface LineConversationViewProps {
   conversationId?: string;
   onBack: (draft?: string) => void;
   onNavigateHome: () => void;
+  onNavigateScreen?: (screen: ScreenType) => void;
   initialDraft?: string;
   isGroup?: boolean;
   isPinned?: boolean;
@@ -1664,6 +1665,19 @@ export function LineConversationView({
               >
                 <UserCheck className="w-4 h-4 text-[#ae7e89]" />
               </button>
+
+              {onNavigateScreen && !isGroup && characterId && (
+                <button
+                  onClick={() => {
+                    try { window.localStorage.setItem('phone:memory-active-character', characterId); } catch {}
+                    onNavigateScreen('memory');
+                  }}
+                  className="w-8 h-8 rounded-full hover:bg-neutral-50 flex items-center justify-center text-[#8b7560]"
+                  title="打开这个角色的长期记忆"
+                >
+                  <Brain className="w-4 h-4 stroke-[1.7]" />
+                </button>
+              )}
 
               <button
                 onClick={() => setShowSettings(true)}
