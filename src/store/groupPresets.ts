@@ -92,7 +92,7 @@ export function getGroupPresets(): GroupChatPreset[] {
 
 export function getGroupPreset(id?: string | null, kind?: GroupPresetKind): GroupChatPreset {
   const presets = getGroupPresets();
-  const match = id ? presets.find(item => item.id === id) : null;
+  const match = id ? presets.find(item => item.id === id && (!kind || item.kind === kind)) : null;
   if (match) return match;
   return presets.find(item => !kind || item.kind === kind) || DEFAULT_GROUP_PRESETS[0];
 }
