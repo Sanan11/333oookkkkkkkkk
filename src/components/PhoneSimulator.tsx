@@ -83,7 +83,7 @@ export function PhoneSimulator({
             title="点击灵动岛"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1" />
-            <span className="text-[9px] font-sans text-white/90">Sane333</span>
+            <span className="text-[9px] font-sans text-white/90">PRIVATE</span>
           </div>
 
           <div className="flex items-center gap-[7px]">
