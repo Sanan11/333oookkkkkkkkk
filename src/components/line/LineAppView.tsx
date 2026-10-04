@@ -170,6 +170,20 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     },
   ]);
 
+  // Background proactive messages can update the chat list without reopening LINE.
+  useEffect(() => {
+    const refreshFromRuntime = () => {
+      try {
+        const raw = window.localStorage.getItem('line:chat-items');
+        if (raw) setChatItems(JSON.parse(raw));
+      } catch {
+        // Keep current in-memory list.
+      }
+    };
+    window.addEventListener('sane333:proactive-message', refreshFromRuntime);
+    return () => window.removeEventListener('sane333:proactive-message', refreshFromRuntime);
+  }, []);
+
   // Imported character cards automatically become LINE contacts.
   useEffect(() => {
     if (!importedCharacters.length) return;
