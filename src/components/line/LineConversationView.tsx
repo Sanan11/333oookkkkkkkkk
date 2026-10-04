@@ -34,12 +34,12 @@ function currentUserNameFallback(): string {
   }
 }
 
-function hasImportedCharacterInStorage(name: string): boolean {
+function hasImportedCharacterInStorage(name: string, characterId?: string): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const raw = window.localStorage.getItem('phone:characters');
     const characters = raw ? JSON.parse(raw) : [];
-    return Array.isArray(characters) && characters.some((character: any) => character?.name === name);
+    return Array.isArray(characters) && characters.some((character: any) => characterId ? character?.id === characterId : character?.name === name);
   } catch {
     return false;
   }
@@ -47,6 +47,8 @@ function hasImportedCharacterInStorage(name: string): boolean {
 
 interface LineConversationViewProps {
   contactName: string;
+  characterId?: string;
+  conversationId?: string;
   onBack: (draft?: string) => void;
   onNavigateHome: () => void;
   initialDraft?: string;
@@ -62,6 +64,8 @@ interface LineConversationViewProps {
 
 export function LineConversationView({
   contactName,
+  characterId,
+  conversationId,
   onBack,
   initialDraft = '',
   isGroup = false,
@@ -73,9 +77,10 @@ export function LineConversationView({
 }: LineConversationViewProps) {
   // Input & Messages
   const [inputText, setInputText] = useState(initialDraft);
-  const hasImportedCharacter = hasImportedCharacterInStorage(contactName);
+  const conversationStorageId = conversationId || characterId || contactName;
+  const hasImportedCharacter = hasImportedCharacterInStorage(contactName, characterId);
   const [messages, setMessages] = usePersistentState<any[]>(
-    `line:conversation:${contactName}`,
+    `line:conversation:${conversationStorageId}`,
     hasImportedCharacter ? [] : getInitialChatMessages(contactName),
   );
 
@@ -124,14 +129,14 @@ export function LineConversationView({
   const [enableChainOfThought, setEnableChainOfThought] = useState(true);
 
   // 酒馆作者注释 (Author's Note / A/N)
-  const [authorsNote, setAuthorsNote] = usePersistentState(`line:authors-note:${contactName}`, '');
+  const [authorsNote, setAuthorsNote] = usePersistentState(`line:authors-note:${conversationStorageId}`, '');
   const [authorsNoteDepth, setAuthorsNoteDepth] = useState('3');
 
   // 普通聊天软件核心能力 (Standard Mobile Messenger Features)
   const [isTyping, setIsTyping] = useState(false);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<number[]>([]);
-  const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${contactName}`, [
+  const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${conversationStorageId}`, [
     ...(hasImportedCharacter ? [] : [{
       id: 101,
       contactName: contactName || '顾言',
@@ -205,8 +210,8 @@ export function LineConversationView({
 
   // 美化管理器与自定义 CSS 编辑器 (Custom CSS Manager)
   const [showCssManager, setShowCssManager] = useState(false);
-  const [currentWallpaper, setCurrentWallpaper] = usePersistentState<'pure-white' | 'warm-light' | 'tokyo-rain' | 'rose-mist'>(`line:wallpaper:${contactName}`, 'pure-white');
-  const [customCss, setCustomCss] = usePersistentState(`line:custom-css:${contactName}`, `/* 酒馆自定义样式 (Custom CSS) */
+  const [currentWallpaper, setCurrentWallpaper] = usePersistentState<'pure-white' | 'warm-light' | 'tokyo-rain' | 'rose-mist'>(`line:wallpaper:${conversationStorageId}`, 'pure-white');
+  const [customCss, setCustomCss] = usePersistentState(`line:custom-css:${conversationStorageId}`, `/* 酒馆自定义样式 (Custom CSS) */
 .custom-chat-view {
   --bubble-border-radius: 16px;
 }
@@ -225,7 +230,9 @@ export function LineConversationView({
 
   // 导入角色卡与全局世界书：真正 AI 回复从这里读取角色核心资料。
   const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
-  const importedCharacter = importedCharacters.find(character => character.name === contactName) || null;
+  const importedCharacter = characterId
+    ? importedCharacters.find(character => character.id === characterId) || null
+    : importedCharacters.find(character => character.name === contactName) || null;
   const activeGroup = isGroup ? getLineGroupByName(contactName) : null;
   const groupAiMembers = activeGroup?.members
     .map(member => ({ member, character: importedCharacters.find(character => character.id === member.characterId || character.name === member.name) || null }))
@@ -236,12 +243,12 @@ export function LineConversationView({
 
   // 酒馆角色核心档案
   const [characterProfile, setCharacterProfile] = usePersistentState(
-    `line:character-profile:${contactName}`,
-    getCharacterProfile(contactName),
+    `line:character-profile:${conversationStorageId}`,
+    getCharacterProfile(contactName, characterId),
   );
 
   // 酒馆世界书条目库 (Lorebook Entries)
-  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${contactName}`, hasImportedCharacter ? [] : [
+  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${conversationStorageId}`, hasImportedCharacter ? [] : [
     {
       id: 'lb1',
       title: '《东京雨夜日常·核心世界书》',
@@ -331,19 +338,19 @@ export function LineConversationView({
 - 先哄她好好睡觉，其他什么都不重要。`,
     },
   ]);
-  const [activeCotPresetId, setActiveCotPresetId] = usePersistentState(`line:cot-active:${contactName}`, 'cot-1');
+  const [activeCotPresetId, setActiveCotPresetId] = usePersistentState(`line:cot-active:${conversationStorageId}`, 'cot-1');
   const activeCotPreset = cotPresets.find((p) => p.id === activeCotPresetId) || cotPresets[0];
-  const [customCotTemplate, setCustomCotTemplate] = usePersistentState(`line:cot-custom:${contactName}`, activeCotPreset.template);
+  const [customCotTemplate, setCustomCotTemplate] = usePersistentState(`line:cot-custom:${conversationStorageId}`, activeCotPreset.template);
 
   // 酒馆预设 (Presets)
-  const [selectedPreset, setSelectedPreset] = usePersistentState(`line:preset:${contactName}`, 'immersive' as 'immersive' | 'casual' | 'slowburn' | 'sweet');
-  const [presetTemp, setPresetTemp] = usePersistentState(`line:preset-temp:${contactName}`, '0.85');
-  const [presetContextLength, setPresetContextLength] = usePersistentState(`line:preset-context:${contactName}`, '20轮');
+  const [selectedPreset, setSelectedPreset] = usePersistentState(`line:preset:${conversationStorageId}`, 'immersive' as 'immersive' | 'casual' | 'slowburn' | 'sweet');
+  const [presetTemp, setPresetTemp] = usePersistentState(`line:preset-temp:${conversationStorageId}`, '0.85');
+  const [presetContextLength, setPresetContextLength] = usePersistentState(`line:preset-context:${conversationStorageId}`, '20轮');
 
   // 状态栏
   const [showRenderedStatusBarModal, setShowRenderedStatusBarModal] = useState(false);
   const [showStatusBarSettings, setShowStatusBarSettings] = useState(false);
-  const [statusData, setStatusData] = usePersistentState(`line:status:${contactName}`, hasImportedCharacter ? {
+  const [statusData, setStatusData] = usePersistentState(`line:status:${conversationStorageId}`, hasImportedCharacter ? {
     location: '',
     time: '',
     activity: '',
@@ -356,15 +363,15 @@ export function LineConversationView({
     mood: '平静，听着窗外的雨声，带着一丝思念',
     favor: '93',
   });
-  const [statusRegex, setStatusRegex] = usePersistentState(`line:status-regex:${contactName}`, '/\\{\\{status:(.*?)\\}\\}/gs');
-  const [statusFormat, setStatusFormat] = usePersistentState(`line:status-format:${contactName}`, 
+  const [statusRegex, setStatusRegex] = usePersistentState(`line:status-regex:${conversationStorageId}`, '/\\{\\{status:(.*?)\\}\\}/gs');
+  const [statusFormat, setStatusFormat] = usePersistentState(`line:status-format:${conversationStorageId}`, 
     '<div class="tavern-status"><span class="badge">📍 {{location}}</span> <span class="badge">🕒 {{time}}</span> <span class="badge">📖 {{activity}}</span> <span class="badge-pink">💖 好感度 {{favor}}</span><div class="mood">心境：{{mood}}</div></div>'
   );
   const [statusTab, setStatusTab] = useState<'preview' | 'regex' | 'format'>('preview');
 
   // 角色个人主页 (Threads / Twitter / LINE 混合风格)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false);
-  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${contactName}`, hasImportedCharacter ? [] : [
+  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${conversationStorageId}`, hasImportedCharacter ? [] : [
     {
       id: 'cp1',
       time: '2小时前',
@@ -403,7 +410,7 @@ export function LineConversationView({
 
   // 线下邀约剧情系统 (Offline Meetup System)
   const [showOfflineInviteModal, setShowOfflineInviteModal] = useState(false);
-  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${contactName}`, hasImportedCharacter ? {
+  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${conversationStorageId}`, hasImportedCharacter ? {
     location: '',
     time: '',
     theme: '',
@@ -416,8 +423,8 @@ export function LineConversationView({
     letter: '前几天洗好的两卷旧胶片出来了，里面有很多你的照片。如果你明晚有空……我想亲手交给你。',
     inviteFrom: 'other' as 'me' | 'other',
   });
-  const [offlineInviteTheme, setOfflineInviteTheme] = usePersistentState<'white' | 'midnight' | 'parchment' | 'rose'>(`line:offline-theme:${contactName}`, 'white');
-  const [offlineInviteCustomCss, setOfflineInviteCustomCss] = usePersistentState(`line:offline-css:${contactName}`, `/* 线下邀约卡片自定义样式 */
+  const [offlineInviteTheme, setOfflineInviteTheme] = usePersistentState<'white' | 'midnight' | 'parchment' | 'rose'>(`line:offline-theme:${conversationStorageId}`, 'white');
+  const [offlineInviteCustomCss, setOfflineInviteCustomCss] = usePersistentState(`line:offline-css:${conversationStorageId}`, `/* 线下邀约卡片自定义样式 */
 .custom-invite-card {
   box-shadow: 0 4px 14px rgba(212, 170, 181, 0.18);
 }`);
@@ -435,13 +442,13 @@ export function LineConversationView({
     { from: '林安', to: '顾言', relation: '老友 · 默契深沉' },
   ]);
   const [groupLorebookActive, setGroupLorebookActive] = useState('《东京雨夜日常·核心世界书》');
-  const [groupPresetId, setGroupPresetId] = usePersistentState(`line:group-preset:${contactName}`, 'online-natural');
+  const [groupPresetId, setGroupPresetId] = usePersistentState(`line:group-preset:${conversationStorageId}`, 'online-natural');
   const activeGroupPreset = getGroupPreset(groupPresetId, 'online');
   const [groupNoticeText, setGroupNoticeText] = useState('周末大家聚会，地点定在原宿下北泽唱片咖啡馆，不见不散~');
 
   // 角色日程
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${contactName}`, hasImportedCharacter ? [] : [
+  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${conversationStorageId}`, hasImportedCharacter ? [] : [
     { id: '1', time: '08:30', title: '起床 · 冲手冲咖啡' },
     { id: '2', time: '12:30', title: '午餐 · 翻阅新寄来的摄影集' },
     { id: '3', time: '16:00', title: '散步 · 顺路买可颂' },
@@ -592,7 +599,7 @@ export function LineConversationView({
       if (customEvent.detail?.characterName !== contactName) return;
 
       try {
-        const raw = window.localStorage.getItem(`line:conversation:${contactName}`);
+        const raw = window.localStorage.getItem(`line:conversation:${conversationStorageId}`);
         if (raw) setMessages(JSON.parse(raw));
       } catch {
         // Keep the current conversation state.
@@ -693,7 +700,7 @@ export function LineConversationView({
       for (let index = 0; index < responders.length; index += 1) {
         const { character } = responders[index];
         if (!character) continue;
-        const memberProfile = getCharacterProfile(character.name);
+        const memberProfile = getCharacterProfile(character.name, character.id);
         const memberMemory = getCharacterMemory(character.id, character.name);
         const replyMsgId = Date.now() + index + 1;
         setMessages(prev => [...prev, { id: replyMsgId, sender: 'other', senderName: character.name, text: '', time: '刚刚', type: 'ai-reply', showThinking: false }]);
