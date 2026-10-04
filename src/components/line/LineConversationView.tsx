@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
+import type { ImportedCharacter } from '../../data/characterImport';
+import type { WorldBook } from '../../types';
+import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
@@ -91,7 +94,7 @@ export function LineConversationView({
   const [enableChainOfThought, setEnableChainOfThought] = useState(true);
 
   // 酒馆作者注释 (Author's Note / A/N)
-  const [authorsNote, setAuthorsNote] = usePersistentState(`line:authors-note:${contactName}`, '[指导原则: 顾言此刻内心正压抑着对你的占有欲与保护欲，言行表面克制沉稳，眼底却有隐秘的深情。]');
+  const [authorsNote, setAuthorsNote] = usePersistentState(`line:authors-note:${contactName}`, '');
   const [authorsNoteDepth, setAuthorsNoteDepth] = useState('3');
 
   // 普通聊天软件核心能力 (Standard Mobile Messenger Features)
@@ -189,6 +192,11 @@ export function LineConversationView({
 .custom-chat-view .thinking-card {
   border-left: 2px solid #d4aab5;
 }`);
+
+  // 导入角色卡与全局世界书：真正 AI 回复从这里读取角色核心资料。
+  const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
+  const importedCharacter = importedCharacters.find(character => character.name === contactName) || null;
+  const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
 
   // 酒馆角色核心档案
   const [characterProfile, setCharacterProfile] = usePersistentState(
@@ -460,13 +468,15 @@ export function LineConversationView({
     return () => clearInterval(timer);
   }, [showAudioCall]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const handleSend = async () => {
+    const userText = inputText.trim();
+    if (!userText || isTyping) return;
+
     const msgId = Date.now();
     const newMsg: any = {
       id: msgId,
       sender: 'me',
-      text: inputText.trim(),
+      text: userText,
       time: '刚刚',
       isRead: false,
     };
@@ -483,37 +493,96 @@ export function LineConversationView({
     setInputText('');
     setIsTyping(true);
 
-    // LINE 经典模拟：1.2秒后已读，2.2秒后角色回复
-    setTimeout(() => {
+    // 保留 LINE 的已读节奏，但回复本身改为真正的模型请求。
+    window.setTimeout(() => {
       setMessages((prev) =>
         prev.map((m) => (m.id === msgId ? { ...m, isRead: true } : m))
       );
     }, 1200);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const replyMsgId = Date.now() + 1;
-      const autoReplyText = isGroup
-        ? 'Aki：收到啦，周末见！'
-        : '顾言：看到你的消息了。别太勉强自己，今晚先早点休息，有我在。';
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: replyMsgId,
-          sender: 'other',
-          text: autoReplyText,
-          time: '刚刚',
-          thinking: '【情境感知】她发来消息了，情绪明显平缓下来。\n【内心欲念】想多陪她说说话，听听她今天都遇到了什么。\n【台词策略】语气温和平静，陪伴感拉满。',
-          showThinking: false,
-        }
-      ]);
-    }, 2200);
+    const replyMsgId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: replyMsgId,
+        sender: 'other',
+        text: '',
+        time: '刚刚',
+        type: 'ai-reply',
+        showThinking: false,
+      },
+    ]);
 
-    // 角色好感度微增
-    if (characterProfile.canAutoChangeRelation) {
-      setTimeout(() => {
+    let streamedText = '';
+
+    try {
+      const settings = readStoredAiSettings();
+      const result = await generateCharacterReply({
+        settings,
+        character: importedCharacter,
+        characterProfile,
+        persona: activePersona,
+        worldbooks,
+        messages: [...messages, newMsg],
+        userMessage: userText,
+        isGroup,
+        authorNote: authorsNote,
+        stylePreset: activeCotPreset?.title || selectedPreset,
+        temperature: Number(presetTemp) || 0.85,
+        onDelta: (delta) => {
+          streamedText += delta;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === replyMsgId
+                ? { ...m, text: streamedText, time: '刚刚' }
+                : m
+            )
+          );
+        },
+      });
+
+      // 非流式供应商或异常情况下，确保最终正文完整写入。
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === replyMsgId
+            ? {
+                ...m,
+                text: result.text,
+                time: '刚刚',
+                type: 'ai-reply',
+                aiModel: result.model,
+                matchedWorldbookEntries: result.matchedWorldbookEntries,
+              }
+            : m
+        )
+      );
+
+      if (result.matchedWorldbookEntries > 0) {
+        showToast(`AI 已读取 ${result.matchedWorldbookEntries} 条命中的世界书设定 ✦`);
+      }
+
+      // 角色好感度微增
+      if (characterProfile.canAutoChangeRelation) {
         setStatusData((prev) => ({ ...prev, favor: String(Number(prev.favor) + 1) }));
-      }, 2500);
+      }
+    } catch (error) {
+      setMessages((prev) => {
+        const partial = prev.find(m => m.id === replyMsgId)?.text;
+        return partial
+          ? prev.map(m => m.id === replyMsgId ? { ...m, text: partial } : m)
+          : prev.filter(m => m.id !== replyMsgId);
+      });
+
+      if (error instanceof Error && error.message === 'AI_NOT_CONFIGURED') {
+        showToast('还没有配置 AI：打开「设置」填写 API Key');
+      } else if (error instanceof Error && error.message === 'AI_BASE_URL_MISSING') {
+        showToast('OpenAI Compatible 需要填写 API Base URL');
+      } else {
+        const message = error instanceof Error ? error.message : 'AI 请求失败';
+        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
+      }
+    } finally {
+      setIsTyping(false);
     }
   };
 
