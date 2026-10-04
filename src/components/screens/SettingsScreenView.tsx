@@ -9,6 +9,7 @@ import { usePersistentState } from '../../store/usePersistentState';
 import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
 import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
+import { exportMedia, importMedia } from '../../store/mediaVault';
 import {
   getBackgroundHeartbeat,
   requestNotificationPermission,
@@ -97,17 +98,42 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
       const parsed = JSON.parse(await file.text());
       const data = parsed?.data;
       if (!data || typeof data !== 'object') throw new Error('备份文件格式不正确');
+
       for (const [key, value] of Object.entries(data)) {
         if (!key.startsWith('phone:') && !key.startsWith('line:')) continue;
         localStorage.setItem(key, JSON.stringify(value));
       }
+
+      if (parsed?.media && typeof parsed.media === 'object') {
+        await importMedia(parsed.media as Record<string, string>);
+      }
+
       window.dispatchEvent(new Event('sane333:data-restored'));
-      notify('数据已恢复；正在重新载入本机项目状态');
+      notify('角色、聊天、设置与媒体已恢复；正在重新载入本机项目状态');
       window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       notify(error instanceof Error ? error.message : '恢复失败');
     } finally {
       if (importRef.current) importRef.current.value = '';
+    }
+  };
+
+  const exportFullBackup = async () => {
+    if (backingUp) return;
+    setBackingUp(true);
+    try {
+      const media = await exportMedia().catch(() => ({} as Record<string, string>));
+      downloadJson(`sane333-full-backup-${Date.now()}.json`, {
+        version: 4,
+        exportedAt: new Date().toISOString(),
+        data: collectLocalData(includeSecretsInBackup),
+        media,
+      });
+      notify(`完整备份已导出 · ${Object.keys(media).length} 个媒体文件`);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '备份导出失败');
+    } finally {
+      setBackingUp(false);
     }
   };
 
@@ -398,9 +424,9 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               <span>备份包含 API 密钥</span>
               <input type="checkbox" checked={includeSecretsInBackup} onChange={e => setIncludeSecretsInBackup(e.target.checked)} />
             </label>
-            <div className="mt-1 text-[8px] text-[#8b8782]">默认不导出密钥，更适合把备份文件留给自己以外的环境。</div>
+            <div className="mt-1 text-[8px] text-[#8b8782]">完整备份会同时包含 IndexedDB 中的图片/语音；默认不导出 API 密钥。</div>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => downloadJson(`sane333-backup-${Date.now()}.json`, { version: 3, exportedAt: new Date().toISOString(), data: collectLocalData(includeSecretsInBackup) })} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" />导出全部数据</button>
+              <button onClick={exportFullBackup} disabled={backingUp} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5 disabled:opacity-50"><Download className="w-3.5 h-3.5" />{backingUp ? '整理备份…' : '导出完整备份'}</button>
               <button onClick={() => importRef.current?.click()} className="py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" />导入 / 恢复</button>
             </div>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e => importBackup(e.target.files?.[0])} />
