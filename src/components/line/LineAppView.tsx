@@ -414,17 +414,18 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                 <div className="relative">
                   <div className="w-[49px] h-[49px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
                     {importedCharacters.find(character => character.name === item.name)?.avatar ? (
-                        <img src={importedCharacters.find(character => character.name === item.name)?.avatar} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        {importedCharacters.find(character => character.name === friend.name)?.avatar ? (
-                    <img src={importedCharacters.find(character => character.name === friend.name)?.avatar} alt={friend.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <svg className="w-[31px] h-[31px] text-[#b7b7b9]" viewBox="0 0 48 48" fill="currentColor">
-                      <circle cx="24" cy="17" r="8" />
-                      <path d="M10 40c1.8-8.1 6.8-12 14-12s12.2 3.9 14 12" />
-                    </svg>
-                  )}
-                      )}
+                      <img
+                        src={importedCharacters.find(character => character.name === item.name)?.avatar}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <svg className="w-[31px] h-[31px] text-[#b7b7b9]" viewBox="0 0 48 48" fill="currentColor">
+                        <circle cx="24" cy="17" r="8" />
+                        <path d="M10 40c1.8-8.1 6.8-12 14-12s12.2 3.9 14 12" />
+                      </svg>
+                    )}
                   </div>
                   {item.isPinned && (
                     <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#ae7e89] text-white flex items-center justify-center text-[7px] shadow-2xs">
@@ -530,10 +531,19 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                   className="h-[67px] px-5 flex items-center cursor-pointer hover:bg-[#fafafa] active:bg-[#f5f5f5] transition-colors"
                 >
                   <div className="w-[49px] h-[49px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
-                    <svg className="w-[31px] h-[31px] text-[#b7b7b9]" viewBox="0 0 48 48" fill="currentColor">
-                      <circle cx="24" cy="17" r="8" />
-                      <path d="M10 40c1.8-8.1 6.8-12 14-12s12.2 3.9 14 12" />
-                    </svg>
+                    {importedCharacters.find(character => character.name === friend.name)?.avatar ? (
+                      <img
+                        src={importedCharacters.find(character => character.name === friend.name)?.avatar}
+                        alt={friend.name}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <svg className="w-[31px] h-[31px] text-[#b7b7b9]" viewBox="0 0 48 48" fill="currentColor">
+                        <circle cx="24" cy="17" r="8" />
+                        <path d="M10 40c1.8-8.1 6.8-12 14-12s12.2 3.9 14 12" />
+                      </svg>
+                    )}
                   </div>
 
                   <div className="ml-3 flex-1 min-w-0">
