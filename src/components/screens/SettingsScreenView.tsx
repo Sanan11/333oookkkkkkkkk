@@ -242,12 +242,12 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
       </header>
 
       <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 text-xs">
-        <section className="relative overflow-hidden p-4 rounded-2xl bg-[#292724] text-white shadow-[0_10px_30px_rgba(30,25,20,.16)]">
-          <div className="absolute -right-10 -top-12 w-32 h-32 rounded-full border border-white/10" />
-          <div className="absolute right-2 bottom-2 text-5xl font-serif opacity-10">333</div>
-          <div className="relative text-[8px] font-mono tracking-[2px] text-white/50">SANE333 / PRIVATE DEVICE</div>
-          <div className="relative mt-2 text-lg font-serif font-bold">你的 API、角色与存档，都在这里。</div>
-          <div className="relative mt-1 text-[9px] text-white/55 leading-relaxed">支持 Gemini、任何 OpenAI Compatible 第三方接口，以及独立语音 / 图片接口。</div>
+        <section className="relative overflow-hidden p-4 rounded-2xl bg-white/65 border border-[rgba(40,36,31,.1)]">
+          <div className="absolute -right-8 -top-10 w-28 h-28 rounded-full border border-[#d4aab5]/20" />
+          <div className="absolute right-3 bottom-2 text-5xl font-serif text-[#d4aab5]/10">333</div>
+          <div className="relative text-[8px] font-mono tracking-[2px] text-[#aaa]">SANE333 / PRIVATE DEVICE</div>
+          <div className="relative mt-2 text-[17px] font-serif font-bold text-[#292724]">你的 API、角色与存档，都在这里。</div>
+          <div className="relative mt-1 text-[9px] text-[#817a72] leading-relaxed">Gemini、OpenAI Compatible、语音、图片、记忆与后台运行，都从这里管理。</div>
         </section>
 
         <div className="grid grid-cols-5 gap-1.5">
@@ -261,7 +261,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
             <button
               key={key}
               onClick={() => setOpenSection(key as typeof openSection)}
-              className={`py-2 rounded-xl border text-[9px] transition-all ${openSection === key ? 'bg-[#292724] border-[#292724] text-white shadow-xs' : 'bg-white/55 border-[rgba(40,36,31,.1)] text-[#5f5952]'}`}
+              className={`py-2 rounded-xl border text-[9px] transition-all ${openSection === key ? 'bg-[#d4aab5] border-[#d4aab5] text-white shadow-xs' : 'bg-white/55 border-[rgba(40,36,31,.1)] text-[#5f5952]'}`}
             >
               {label}
             </button>
