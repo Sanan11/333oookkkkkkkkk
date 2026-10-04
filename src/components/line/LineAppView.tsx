@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePersistentState } from '../../store/usePersistentState';
 import { ScreenType } from '../../types';
 import { LineConversationView } from './LineConversationView';
 import {
@@ -72,13 +73,13 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   const [isRefreshingMoments, setIsRefreshingMoments] = useState(false);
 
   // User / Mask State
-  const [currentUser, setCurrentUser] = useState({
+  const [currentUser, setCurrentUser] = usePersistentState('line:current-user', {
     name: 'Coral',
     id: 'coral_01',
     desc: '现在使用的身份',
   });
 
-  const [masks, setMasks] = useState([
+  const [masks, setMasks] = usePersistentState('line:masks', [
     { name: 'Coral', id: 'coral_01', desc: '现在使用的身份' },
     { name: '小林', id: 'kobayashi_02', desc: '东京 · 24' },
     { name: 'Emma', id: 'emma_03', desc: '伦敦 · 26' },
@@ -86,7 +87,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Chat Data with Pin, Mute, Draft, and Group capabilities
-  const [chatItems, setChatItems] = useState([
+  const [chatItems, setChatItems] = usePersistentState('line:chat-items', [
     {
       id: '1',
       name: '顾言',
@@ -167,7 +168,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Global Favorites storage
-  const [globalFavorites, setGlobalFavorites] = useState([
+  const [globalFavorites, setGlobalFavorites] = usePersistentState('line:global-favorites', [
     {
       id: 1,
       contactName: '顾言',
@@ -183,7 +184,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Friends Data
-  const [friendsList, setFriendsList] = useState([
+  const [friendsList, setFriendsList] = usePersistentState('line:friends-list', [
     { name: '顾言', note: '心意相通 · 晚间常伴', online: true, pinyin: 'G' },
     { name: '小夏', note: '今天也在慢慢生活', online: true, pinyin: 'X' },
     { name: 'Haruka', note: '东京 · 18:24', online: true, pinyin: 'H' },
@@ -194,7 +195,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Moments Posts with real like and comments list
-  const [momentsPosts, setMomentsPosts] = useState([
+  const [momentsPosts, setMomentsPosts] = usePersistentState('line:moments-posts', [
     {
       id: 'p1',
       name: '小夏',
