@@ -1683,6 +1683,14 @@ export function LineConversationView({
               </button>
 
               <button
+                onClick={() => setShowTogetherMusic(true)}
+                className="w-8 h-8 rounded-full hover:bg-neutral-50 flex items-center justify-center text-[#8b7560]"
+                title="一起听歌"
+              >
+                <Music2 className="w-4 h-4 stroke-[1.7]" />
+              </button>
+
+              <button
                 onClick={() => setShowVideoCall(true)}
                 className="w-8 h-8 rounded-full hover:bg-neutral-50 flex items-center justify-center text-[#303033]"
                 title="视频通话"
