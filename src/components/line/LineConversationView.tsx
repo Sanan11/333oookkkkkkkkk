@@ -647,7 +647,7 @@ export function LineConversationView({
     let streamedText = '';
 
     try {
-      const settings = readStoredAiSettings();
+      const settings = readStoredAiSettings(importedCharacter?.id, contactName);
       const result = await generateCharacterReply({
         settings,
         character: importedCharacter,
@@ -991,7 +991,7 @@ export function LineConversationView({
     showToast('已确认赴约！好感度 +5 💖');
 
     const invite = messages.find(message => message.id === msgId);
-    const settings = readStoredAiSettings();
+    const settings = readStoredAiSettings(importedCharacter?.id, contactName);
     if (!settings.apiKey.trim()) return;
 
     try {
@@ -1253,7 +1253,7 @@ export function LineConversationView({
         showToast(`${typeLabels[type]}已发送：${file.name}`);
 
           if (type === 'image') {
-          const settings = readStoredAiSettings();
+          const settings = readStoredAiSettings(importedCharacter?.id, contactName);
           if (!settings.apiKey.trim()) return;
 
           setIsTyping(true);
