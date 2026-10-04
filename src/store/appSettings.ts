@@ -9,6 +9,8 @@ export interface AppSettings {
   contextLength: number;
   maxOutputTokens: number;
   autoSave: boolean;
+  autoMemoryEnabled: boolean;
+  autoMemoryEveryMessages: number;
   temperature: number;
 
   voiceEnabled: boolean;
@@ -49,6 +51,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   contextLength: 24,
   maxOutputTokens: 1200,
   autoSave: true,
+  autoMemoryEnabled: true,
+  autoMemoryEveryMessages: 20,
   temperature: 0.85,
 
   voiceEnabled: false,
