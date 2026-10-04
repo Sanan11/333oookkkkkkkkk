@@ -205,7 +205,7 @@ function buildConversationMessages(input: AiReplyInput) {
 
   const last = recent[recent.length - 1];
   if (!last || last.role !== 'user' || last.content !== input.userMessage) {
-    recent.push({ role: 'user', content: input.userMessage });
+    recent.push({ role: 'user', content: input.userMessage, imageData: undefined });
   }
   return recent;
 }
@@ -324,7 +324,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
       ],
     })),
     generationConfig: {
-      temperature: Math.max(0, Math.min(2, input.temperature ?? settings.temperature ?? 0.85)),
+      temperature: Math.max(0, Math.min(2, input.temperature ?? input.settings.temperature ?? 0.85)),
       maxOutputTokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
     },
   };
