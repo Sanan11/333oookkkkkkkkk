@@ -3,7 +3,7 @@ import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
 import { generateCharacterReply, generateCreativeText, readStoredAiSettings } from '../../ai/aiEngine';
-import { generateImage, generateSpeech } from '../../ai/mediaEngine';
+import { generateImage, generateSpeech, transcribeAudio } from '../../ai/mediaEngine';
 import { readAppSettings } from '../../store/appSettings';
 import { getMedia, putMedia } from '../../store/mediaVault';
 import { getCharacterMemory } from '../../store/characterMemory';
@@ -484,21 +484,36 @@ export function LineConversationView({
 
         const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = async () => {
           const audioUrl = typeof reader.result === 'string' ? reader.result : '';
           if (!audioUrl) return;
-          void putMedia(audioUrl).then(mediaRef => {
+
+          try {
+            const mediaRef = await putMedia(audioUrl);
+            let transcript = '（真实语音消息）';
+            const appSettings = readAppSettings();
+
+            if (appSettings.sttEnabled && appSettings.sttProvider !== 'browser') {
+              try {
+                transcript = await transcribeAudio(blob, 'voice.webm', appSettings);
+              } catch {
+                transcript = '（语音转写失败）';
+              }
+            }
+
             setMessages(prev => [...prev, {
               id: Date.now(),
               sender: 'me',
               type: 'voice',
               duration: `0:${elapsed < 10 ? `0${elapsed}` : elapsed}`,
-              transcript: '（真实语音消息）',
+              transcript,
               mediaRef,
               time: '刚刚',
             }]);
-            showToast('真实语音已发送');
-          }).catch(() => showToast('语音保存失败，请重试'));
+            showToast(transcript.startsWith('（') ? '真实语音已发送' : '语音已发送 · 已自动转写');
+          } catch {
+            showToast('语音保存失败，请重试');
+          }
         };
         reader.readAsDataURL(blob);
       };
