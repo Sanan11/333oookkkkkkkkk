@@ -15,6 +15,7 @@ import { SettingsScreenView } from './screens/SettingsScreenView';
 import { ProjectStudioScreenView } from './screens/ProjectStudioScreenView';
 import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
 import { CalendarScreenView } from './screens/CalendarScreenView';
+import { NpcScreenView } from './screens/NpcScreenView';
 import { LineAppView } from './line/LineAppView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 
@@ -157,6 +158,10 @@ export function PhoneSimulator({
 
           {currentScreen === 'calendar' && (
             <CalendarScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'npc' && (
+            <NpcScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'lock' && (
