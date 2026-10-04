@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft, Check, ChevronRight, FileCode2, Folder, Github, KeyRound, Loader2, MessageCircle, Plus, Save, Send, Settings2, ShieldAlert, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import type { ScreenType } from '../../types';
+import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
+import { readAppSettings, saveAppSettings, type AppSettings } from '../../store/appSettings';
 
 type Tab = 'chat' | 'files' | 'changes' | 'admin' | 'settings';
 type Item = { name: string; path: string; type: 'file' | 'dir'; sha?: string };
@@ -68,9 +70,10 @@ function decodeBase64(value: string) {
 
 export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: ScreenType) => void }) {
   const [tab, setTab] = useState<Tab>('chat');
-  const [base, setBase] = useState(() => readStore(STORE.base, 'https://api.openai.com/v1'));
-  const [key, setKey] = useState(() => readStore(STORE.key));
-  const [model, setModel] = useState(() => readStore(STORE.model));
+  const [aiSettings, setAiSettings] = useState<AppSettings>(() => readAppSettings());
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [testingAi, setTestingAi] = useState(false);
   const [owner, setOwner] = useState(() => readStore(STORE.owner, 'baekyuko3-sys'));
   const [repo, setRepo] = useState(() => readStore(STORE.repo, '333oookkkkkkkkk'));
   const [branch, setBranch] = useState(() => readStore(STORE.branch, 'main'));
@@ -93,6 +96,7 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
   const [notice, setNotice] = useState('');
 
   const ready = Boolean(owner.trim() && repo.trim() && branch.trim() && token.trim());
+  const aiReady = Boolean(aiSettings.apiBaseUrl.trim() && aiSettings.apiKey.trim() && aiSettings.model.trim());
   const dirty = Boolean(file && code !== original);
 
   const notify = (text: string) => {
@@ -101,14 +105,42 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
   };
 
   const saveSettings = () => {
-    writeStore(STORE.base, base);
-    writeStore(STORE.key, key);
-    writeStore(STORE.model, model);
+    saveAppSettings(aiSettings);
     writeStore(STORE.owner, owner);
     writeStore(STORE.repo, repo);
     writeStore(STORE.branch, branch);
     writeStore(STORE.token, token);
     notify('Studio 设置已保存');
+  };
+
+  const updateAi = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const next = saveAppSettings({ [key]: value });
+    setAiSettings(next);
+  };
+
+  const loadModels = async () => {
+    setLoadingModels(true);
+    try {
+      const models = await listOpenAiCompatibleModels(aiSettings);
+      setAvailableModels(models);
+      notify(models.length ? '已拉取 ' + models.length + ' 个模型' : '接口没有返回模型列表');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '模型拉取失败');
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  const testAi = async () => {
+    setTestingAi(true);
+    try {
+      const result = await testAiConnection(aiSettings);
+      notify(result.text || 'AI 连接成功');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'AI 连接失败');
+    } finally {
+      setTestingAi(false);
+    }
   };
 
   const list = async (folder = '') => {
@@ -184,7 +216,7 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
 
   const ask = async () => {
     if (!prompt.trim()) return;
-    if (!key.trim() || !model.trim()) {
+    if (!aiSettings.apiKey.trim() || !aiSettings.model.trim()) {
       setTab('settings');
       notify('先填写 AI API Key 和 Model');
       return;
@@ -195,14 +227,14 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
     setAiBusy(true);
     try {
       const context = file ? '\n当前文件：' + file.path + '\n\n' + code.slice(0, 50000) : '';
-      const response = await fetch(aiUrl(base), {
+      const response = await fetch(aiUrl(aiSettings.apiBaseUrl), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + key,
+          Authorization: 'Bearer ' + aiSettings.apiKey,
         },
         body: JSON.stringify({
-          model,
+          model: aiSettings.model,
           messages: [
             {
               role: 'system',
@@ -452,9 +484,16 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
             <div className="p-3.5 rounded-2xl bg-[#ebe6de] text-[9px]"><b>Studio Settings</b><div className="mt-1 text-[#777069]">AI Key 与 GitHub Token 仅保存在当前浏览器。</div></div>
             <div className="p-3 rounded-2xl bg-white/60 space-y-2">
               <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">AI · OPENAI COMPATIBLE</div>
-              <label className="text-[9px] block">API Base URL<input value={base} onChange={event => setBase(event.target.value)} placeholder="https://api.openai.com/v1" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
-              <label className="text-[9px] block">API Key<input type="password" value={key} onChange={event => setKey(event.target.value)} placeholder="sk-..." className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
-              <label className="text-[9px] block">Model<input value={model} onChange={event => setModel(event.target.value)} placeholder="模型名称" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+              <label className="text-[9px] block">API Base URL<input value={aiSettings.apiBaseUrl} onChange={event => updateAi('apiBaseUrl', event.target.value)} placeholder="https://api.openai.com/v1" className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+              <label className="text-[9px] block">API Key<input type="password" value={aiSettings.apiKey} onChange={event => updateAi('apiKey', event.target.value)} placeholder="sk-..." className="mt-1 w-full p-2.5 rounded-xl bg-white/80 text-[9px] outline-none" /></label>
+              <div className="flex gap-1.5">
+                <select value={aiSettings.model} onChange={event => updateAi('model', event.target.value)} className="flex-1 mt-1 p-2.5 rounded-xl bg-white/80 text-[9px] outline-none">
+                  <option value="">选择模型</option>
+                  {availableModels.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <button onClick={() => void loadModels()} disabled={loadingModels} className="mt-1 px-3 rounded-xl bg-white text-[8px] disabled:opacity-40">{loadingModels ? '拉取中…' : '拉取模型'}</button>
+              </div>
+              <button onClick={() => void testAi()} disabled={testingAi || !aiReady} className="w-full py-2.5 rounded-xl bg-[#292724] text-white text-[9px] disabled:opacity-40">{testingAi ? '测试中…' : '测试 AI 连接'}</button>
             </div>
             <div className="p-3 rounded-2xl bg-white/60 space-y-2">
               <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">GITHUB PROJECT</div>
