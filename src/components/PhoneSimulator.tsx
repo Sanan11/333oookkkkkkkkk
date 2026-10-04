@@ -213,64 +213,7 @@ export function PhoneSimulator({
 
       </div>
 
-      {/* Screen quick controls */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 p-1 bg-neutral-900 border border-neutral-800 rounded-2xl text-[11px] text-neutral-300">
-        <button
-          onClick={() => setCurrentScreen('home')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'home' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          📱 纯白主屏幕 (Sane333)
-        </button>
-        <button
-          onClick={() => setCurrentScreen('chat')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'chat' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          💬 LINE 对话
-        </button>
-        <button
-          onClick={() => setCurrentScreen('music')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'music' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          ♪ Music 音乐
-        </button>
-        <button
-          onClick={() => setCurrentScreen('moments')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'moments' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          ◉ Instagram
-        </button>
-        <button
-          onClick={() => setCurrentScreen('threads')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'threads' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          @ Threads
-        </button>
-        <button
-          onClick={() => setCurrentScreen('spy-phone')}
-          className={`px-3 py-1 rounded-xl transition-all ${
-            currentScreen === 'spy-phone' ? 'bg-[#8b7560] text-white font-medium shadow-xs' : 'hover:text-white'
-          }`}
-        >
-          🕵️ 查手机
-        </button>
-        <button
-          onClick={() => setIsSheetOpen(true)}
-          className="px-3 py-1 rounded-xl bg-neutral-800 hover:text-white text-amber-300 flex items-center gap-1"
-        >
-          <span>⌘</span>
-          <span>主页设置</span>
-        </button>
-      </div>
+
 
     </div>
   );
