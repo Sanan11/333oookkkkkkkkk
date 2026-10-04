@@ -90,7 +90,7 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
     } : null;
 
     const systemPrompt = [
-      '你是 Sane333 的项目编辑助手。',
+      '你是这个私人虚拟手机项目的编辑助手。',
       '用户希望修改当前私人虚拟手机项目。你要基于现有资料提出精确、可执行的结构化修改。',
       '只修改项目设定和当前默认角色允许编辑的文字字段；不要创建虚假的角色，不要删除数据，不要修改 ID。',
       '必须返回严格 JSON，不要 Markdown，不要代码围栏。',
