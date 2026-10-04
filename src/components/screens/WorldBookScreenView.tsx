@@ -4,24 +4,12 @@ import { ScreenType, WorldBook, WorldBookEntry } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 
 const starterBook: WorldBook = {
-  id: 'worldbook-main',
-  name: '我的世界书',
-  description: '用于角色长期世界观、人物关系与场景规则。',
+  id: 'worldbook-template',
+  name: '新世界书',
+  description: '',
   enabled: true,
   updatedAt: new Date().toISOString(),
-  entries: [
-    {
-      id: 'entry-1',
-      name: '示例条目',
-      keywords: ['示例', '世界书'],
-      content: '这里放你的世界规则。真正接入 AI 后，只有匹配到关键词且条目启用时才注入上下文。',
-      enabled: true,
-      priority: 10,
-      weight: 100,
-      insertion: 'before',
-      depth: 0,
-    },
-  ],
+  entries: [],
 };
 
 function downloadJson(filename: string, data: unknown) {
@@ -52,7 +40,7 @@ function createEntry(): WorldBookEntry {
 
 export function WorldBookScreenView({ onNavigate }: { onNavigate: (screen: ScreenType) => void }) {
   const importRef = useRef<HTMLInputElement>(null);
-  const [books, setBooks] = usePersistentState<WorldBook[]>('phone:worldbooks', [starterBook]);
+  const [books, setBooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
   const [selectedBookId, setSelectedBookId] = useState(books[0]?.id || '');
   const [selectedEntryId, setSelectedEntryId] = useState(books[0]?.entries[0]?.id || '');
   const [search, setSearch] = useState('');
