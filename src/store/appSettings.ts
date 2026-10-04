@@ -7,6 +7,7 @@ export interface AppSettings {
   model: string;
   streaming: boolean;
   contextLength: number;
+  maxOutputTokens: number;
   autoSave: boolean;
   temperature: number;
 
@@ -39,6 +40,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   model: 'gemini-2.5-flash',
   streaming: true,
   contextLength: 24,
+  maxOutputTokens: 1200,
   autoSave: true,
   temperature: 0.85,
 
