@@ -557,7 +557,12 @@ export async function summarizeConversationMemory(
     .join('\n');
 
   const mode = appSettings.memoryMode || 'hybrid';
-  const model = appSettings.memoryModel.trim() || settings.model;
+  const roleModel =
+    mode === 'diary' ? appSettings.memoryDiaryModel.trim() :
+    mode === 'facts' ? appSettings.memoryFactsModel.trim() :
+    mode === 'relationship' ? appSettings.memoryRelationshipModel.trim() :
+    '';
+  const model = roleModel || appSettings.memoryModel.trim() || settings.model;
   const memorySettings: AiSettings = { ...settings, model, temperature: appSettings.memoryTemperature };
   const modeInstruction =
     mode === 'diary' ? '重点整理成关系日记：记录发生了什么、氛围与值得记住的经历，不虚构用户感受。' :
