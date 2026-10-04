@@ -25,9 +25,9 @@ async function readJsonOrText(response: Response): Promise<any> {
 }
 
 function joinEndpoint(base: string, path: string): string {
-  const normalized = base.trim().replace(/\\/+$/, '');
+  const normalized = base.trim().replace(/\/+$/, '');
   if (!normalized) throw new Error('MEDIA_BASE_URL_MISSING');
-  return /\\/(audio\\/speech|images\\/generations)$/i.test(normalized)
+  return /\/(audio\/speech|images\/generations)$/i.test(normalized)
     ? normalized
     : normalized + path;
 }
