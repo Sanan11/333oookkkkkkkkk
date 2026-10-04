@@ -122,7 +122,7 @@ export function deleteCharacterMemoryItem(characterId: string, itemId: string): 
 export function buildMemoryContext(memory: CharacterMemory, maxItems = 20): string {
   const sections: string[] = [];
   if (memory.summary.trim()) {
-    sections.push('【长期记忆摘要】\\n' + memory.summary.trim());
+    sections.push('【长期记忆摘要】\n' + memory.summary.trim());
   }
 
   const items = [...memory.items]
@@ -131,10 +131,10 @@ export function buildMemoryContext(memory: CharacterMemory, maxItems = 20): stri
 
   if (items.length) {
     sections.push(
-      '【长期记忆条目】\\n' +
-      items.map(item => `- [重要度 ${item.importance}] ${item.content}`).join('\\n')
+      '【长期记忆条目】\n' +
+      items.map(item => `- [重要度 ${item.importance}] ${item.content}`).join('\n')
     );
   }
 
-  return sections.join('\\n\\n') || '当前没有已保存的长期记忆。';
+  return sections.join('\n\n') || '当前没有已保存的长期记忆。';
 }
