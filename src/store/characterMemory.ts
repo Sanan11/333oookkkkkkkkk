@@ -34,10 +34,10 @@ export function getCharacterMemory(characterId: string, characterName: string): 
     if (!raw) return emptyMemory(characterId, characterName);
     const parsed = JSON.parse(raw) as Partial<CharacterMemory>;
     return {
-      ...emptyMemory(characterId, characterName),
+      ...emptyMemory(characterId, characterName || parsed.characterName || ''),
       ...parsed,
       characterId,
-      characterName,
+      characterName: characterName || parsed.characterName || '',
       items: Array.isArray(parsed.items) ? parsed.items : [],
     };
   } catch {
