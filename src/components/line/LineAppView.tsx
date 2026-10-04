@@ -3,6 +3,7 @@ import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import { ScreenType } from '../../types';
 import { LineConversationView } from './LineConversationView';
+import { createLineGroup } from '../../store/lineGroups';
 import {
   Pin, BellOff, Bookmark, Heart, MessageCircle, Share2, Plus, Search,
   Check, Trash2, X, Sliders, ChevronRight, UserCheck, Shield, Volume2,
@@ -1067,9 +1068,21 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
             <button
               onClick={() => {
                 const groupTitle = newGroupName.trim() || '我们的新群聊';
-                const newChat = {
-                  id: `group_${Date.now()}`,
+                const group = createLineGroup({
                   name: groupTitle,
+                  ownerId: currentUser.id,
+                  ownerName: currentUser.name,
+                  memberNames: selectedGroupFriends,
+                  characterIds: Object.fromEntries(
+                    importedCharacters
+                      .filter(character => selectedGroupFriends.includes(character.name))
+                      .map(character => [character.name, character.id])
+                  ),
+                  announcement: '',
+                });
+                const newChat = {
+                  id: group.id,
+                  name: group.name,
                   time: '刚刚',
                   preview: `${currentUser.name} 创建了群聊`,
                   unread: 0,
@@ -1077,6 +1090,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                   isMuted: false,
                   draft: '',
                   isGroup: true,
+                  groupId: group.id,
                 };
                 setChatItems((prev) => [newChat, ...prev]);
                 setShowGroupModal(false);
