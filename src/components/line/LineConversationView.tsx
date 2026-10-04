@@ -417,10 +417,84 @@ export function LineConversationView({
   const [toastMsg, setToastMsg] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingDiscardRef = useRef(false);
 
   const showToast = (text: string) => {
     setToastMsg(text);
     setTimeout(() => setToastMsg(''), 1800);
+  };
+
+  const startRealRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      showToast('当前浏览器不支持真实麦克风录音');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingStreamRef.current = stream;
+      recordingChunksRef.current = [];
+      recordingDiscardRef.current = false;
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = event => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const discard = recordingDiscardRef.current;
+        const chunks = recordingChunksRef.current;
+        const elapsed = Math.max(1, recordDuration);
+        stream.getTracks().forEach(track => track.stop());
+        recordingStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+
+        if (discard || !chunks.length) return;
+
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const audioUrl = typeof reader.result === 'string' ? reader.result : '';
+          if (!audioUrl) return;
+          setMessages(prev => [...prev, {
+            id: Date.now(),
+            sender: 'me',
+            type: 'voice',
+            duration: `0:${elapsed < 10 ? `0${elapsed}` : elapsed}`,
+            transcript: '（真实语音消息）',
+            audioUrl,
+            time: '刚刚',
+          }]);
+          showToast('真实语音已发送');
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+      showToast('麦克风已开启');
+    } catch {
+      showToast('无法使用麦克风，请检查浏览器权限');
+    }
+  };
+
+  const stopRealRecording = (discard: boolean) => {
+    recordingDiscardRef.current = discard;
+    setIsRecording(false);
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+      return;
+    }
+
+    recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+    recordingStreamRef.current = null;
   };
 
   const hasMountedConversationRef = useRef(false);
@@ -1058,8 +1132,10 @@ export function LineConversationView({
 
     if (type === 'image' || type === 'voice') {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         const mediaUrl = typeof reader.result === 'string' ? reader.result : '';
+        if (!mediaUrl) return;
+
         const newMsg = {
           id: Date.now(),
           sender: 'me',
@@ -1067,20 +1143,87 @@ export function LineConversationView({
           mediaType: type,
           fileName: file.name,
           mediaUrl,
+          imageData: type === 'image' ? mediaUrl : undefined,
           audioUrl: type === 'voice' ? mediaUrl : undefined,
-          transcript: type === 'voice' ? '' : undefined,
+          transcript: type === 'voice' ? '（本地语音消息）' : undefined,
           duration: type === 'voice' ? '语音' : undefined,
           time: '刚刚',
         };
-        setMessages((prev) => [...prev, newMsg]);
+
+        setMessages(prev => [...prev, newMsg]);
         setSubSheetType(null);
         showToast(`${typeLabels[type]}已发送：${file.name}`);
+
+        if (type === 'image') {
+          const settings = readStoredAiSettings();
+          if (!settings.apiKey.trim()) return;
+
+          setIsTyping(true);
+          const replyMsgId = Date.now() + 1;
+          setMessages(prev => [...prev, {
+            id: replyMsgId,
+            sender: 'other',
+            type: 'ai-reply',
+            text: '',
+            time: '刚刚',
+            showThinking: false,
+          }]);
+
+          let streamed = '';
+          try {
+            const result = await generateCharacterReply({
+              settings,
+              character: importedCharacter,
+              characterProfile,
+              persona: activePersona,
+              worldbooks,
+              memory: characterMemory,
+              project: projectManifest,
+              messages: [
+                ...messages,
+                {
+                  sender: 'me',
+                  text: '我给你发了一张图片，请看看这张图片并自然回应。',
+                  imageData: mediaUrl,
+                },
+              ],
+              userMessage: '我给你发了一张图片，请看看这张图片并自然回应。',
+              isGroup,
+              authorNote: authorsNote,
+              stylePreset: activeCotPreset?.title || selectedPreset,
+              temperature: Number(presetTemp) || 0.85,
+              onDelta: delta => {
+                streamed += delta;
+                setMessages(prev => prev.map(message =>
+                  message.id === replyMsgId ? { ...message, text: streamed } : message
+                ));
+              },
+            });
+
+            setMessages(prev => prev.map(message =>
+              message.id === replyMsgId
+                ? { ...message, text: result.text, aiModel: result.model }
+                : message
+            ));
+
+            const latestSettings = readAppSettings();
+            if (latestSettings.voiceEnabled && latestSettings.autoSpeakAiReplies) {
+              try { await generateSpeech(result.text, latestSettings); } catch {}
+            }
+          } catch (error) {
+            setMessages(prev => prev.filter(message => message.id !== replyMsgId));
+            const message = error instanceof Error ? error.message : '图片理解失败';
+            showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
+          } finally {
+            setIsTyping(false);
+          }
+        }
       };
       reader.readAsDataURL(file);
       return;
     }
 
-    setMessages((prev) => [...prev, {
+    setMessages(prev => [...prev, {
       id: Date.now(),
       sender: 'me',
       type: 'real-media',
@@ -1840,26 +1983,14 @@ export function LineConversationView({
       {/* 3. RECORDING BAR */}
       {isRecording && (
         <div className="h-[64px] bg-white border-t border-[#ededee] flex items-center justify-between px-5 text-xs animate-in slide-in-from-bottom z-30">
-          <button onClick={() => setIsRecording(false)} className="text-[#888] cursor-pointer">
+          <button onClick={() => stopRealRecording(true)} className="text-[#888] cursor-pointer">
             取消
           </button>
           <div className="font-semibold text-[#555]">
             00:{recordDuration < 10 ? `0${recordDuration}` : recordDuration}
           </div>
           <button
-            onClick={() => {
-              setIsRecording(false);
-              const newMsg = {
-                id: Date.now(),
-                sender: 'me',
-                type: 'voice',
-                duration: `0:${recordDuration < 10 ? `0${recordDuration}` : recordDuration}`,
-                transcript: '（真实语音消息）',
-                time: '刚刚',
-              };
-              setMessages((prev) => [...prev, newMsg]);
-              showToast('语音已发送');
-            }}
+            onClick={() => stopRealRecording(false)}
             className="text-[#c98f9d] font-medium cursor-pointer"
           >
             松开 发送
@@ -2014,7 +2145,7 @@ export function LineConversationView({
               <button
                 onClick={() => {
                   setShowVoiceSheet(false);
-                  setIsRecording(true);
+                  startRealRecording();
                 }}
                 className="p-4 rounded-[14px] bg-[#f7f7f8] hover:bg-[#efeef1] flex flex-col items-center gap-2 cursor-pointer transition-colors"
               >
