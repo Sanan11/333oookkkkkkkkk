@@ -4,6 +4,7 @@ import type { ImportedCharacter } from '../../data/characterImport';
 import { ScreenType } from '../../types';
 import { LineConversationView } from './LineConversationView';
 import { createLineGroup } from '../../store/lineGroups';
+import { markCharacterRead } from '../../store/worldRuntime';
 import {
   Pin, BellOff, Bookmark, Heart, MessageCircle, Share2, Plus, Search,
   Check, Trash2, X, Sliders, ChevronRight, UserCheck, Shield, Volume2,
@@ -235,6 +236,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   // If a chat is open, render the detail view
   if (activeChatId) {
     const activeItem = chatItems.find((c) => c.id === activeChatId);
+    if (activeItem?.characterId) markCharacterRead(activeItem.characterId);
     const activeChatName = activeItem?.name || activeChatId;
     const activeCharacterId = activeItem?.characterId || undefined;
     const conversationId = activeItem?.id || activeCharacterId || activeItem?.name || activeChatId;
