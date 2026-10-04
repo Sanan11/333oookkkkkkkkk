@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ScreenType } from '../../types';
-import { getWorldRuntime, getWorldUnreadCount } from '../../store/worldRuntime';
+import { getWorldUnreadCount } from '../../store/worldRuntime';
 
 interface SaneHomeScreenViewProps {
   onNavigate: (screen: ScreenType) => void;
