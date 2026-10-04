@@ -31,7 +31,7 @@ function collectLocalData(includeSecrets = true) {
 
   if (!includeSecrets && data['phone:settings'] && typeof data['phone:settings'] === 'object') {
     const safe = { ...(data['phone:settings'] as Record<string, unknown>) };
-    for (const key of ['apiKey', 'voiceApiKey', 'imageApiKey']) safe[key] = '';
+    for (const key of ['apiKey', 'voiceApiKey', 'sttApiKey', 'imageApiKey']) safe[key] = '';
     data['phone:settings'] = safe;
   }
 
@@ -468,6 +468,44 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                 AI 回复自动发声 · <b className="text-[#8b7560]">{settings.autoSpeakAiReplies ? 'ON' : 'OFF'}</b>
               </button>
             </div>
+            <div className="mt-3 p-3 rounded-2xl bg-[#ebe7df] border border-black/5">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">STT / 语音转文字</div>
+              <button onClick={() => update('sttEnabled', !settings.sttEnabled)} className="w-full mt-2 p-2.5 rounded-xl bg-white/55 flex items-center justify-between text-left">
+                <div><div className="text-[10px] font-semibold text-[#403b36]">语音消息转写</div><div className="text-[8px] text-[#8b8782] mt-0.5">录音后把语音转成文字，供 AI 理解与聊天记录搜索</div></div>
+                <span className="text-[9px] font-mono text-[#8b7560]">{settings.sttEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+              {settings.sttEnabled && <>
+                <label className="block mt-2.5 text-[8px] text-[#8b8782]">STT Provider
+                  <select value={settings.sttProvider} onChange={e => update('sttProvider', e.target.value as AppSettings['sttProvider'])} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
+                    <option value="openai-compatible">OpenAI Compatible /audio/transcriptions</option>
+                    <option value="custom">Custom STT Endpoint</option>
+                    <option value="browser">浏览器实时识别（实验）</option>
+                  </select>
+                </label>
+                {settings.sttProvider !== 'browser' && <>
+                  <label className="block mt-2 text-[8px] text-[#8b8782]">STT Base URL
+                    <input value={settings.sttBaseUrl} onChange={e => update('sttBaseUrl', e.target.value)} placeholder="例如 https://api.openai.com/v1" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[9px] font-mono outline-none" />
+                  </label>
+                  <label className="block mt-2 text-[8px] text-[#8b8782]">STT API Key
+                    <input type="password" value={settings.sttApiKey} onChange={e => update('sttApiKey', e.target.value)} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">STT Model
+                      <input value={settings.sttModel} onChange={e => update('sttModel', e.target.value)} className="w-full mt-1 bg-transparent outline-none text-[9px] font-mono text-[#4a4540]" />
+                    </label>
+                    <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Language
+                      <input value={settings.sttLanguage} onChange={e => update('sttLanguage', e.target.value)} className="w-full mt-1 bg-transparent outline-none text-[9px] font-mono text-[#4a4540]" />
+                    </label>
+                  </div>
+                </>}
+                <button onClick={() => {
+                  update('sttBaseUrl', settings.voiceBaseUrl || settings.apiBaseUrl);
+                  update('sttApiKey', settings.voiceApiKey || settings.apiKey);
+                  notify('已复制语音 API 到 STT');
+                }} className="w-full mt-2 py-2 rounded-xl bg-white/70 border border-black/5 text-[9px]">复制语音 API 到 STT</button>
+              </>}
+            </div>
+
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button onClick={() => copyChatToMedia('voice')} className="py-2 rounded-xl bg-white/75 border border-[rgba(40,36,31,.1)] text-[9px] flex items-center justify-center gap-1"><RefreshCw className="w-3 h-3" />复制聊天 API</button>
               <button onClick={testVoice} className="py-2 rounded-xl bg-[#292724] text-white text-[9px] flex items-center justify-center gap-1"><Volume2 className="w-3 h-3" />测试语音</button>
