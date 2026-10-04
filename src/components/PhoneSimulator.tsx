@@ -13,6 +13,7 @@ import { SpyPhoneScreenView } from './screens/SpyPhoneScreenView';
 import { WorldBookScreenView } from './screens/WorldBookScreenView';
 import { SettingsScreenView } from './screens/SettingsScreenView';
 import { ProjectStudioScreenView } from './screens/ProjectStudioScreenView';
+import { MemoryScreenView } from './screens/MemoryScreenView';
 import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
 import { CalendarScreenView } from './screens/CalendarScreenView';
 import { NpcScreenView } from './screens/NpcScreenView';
@@ -183,6 +184,10 @@ export function PhoneSimulator({
 
           {currentScreen === 'project-studio' && (
             <ProjectStudioScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'memory' && (
+            <MemoryScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'offline-story' && (
