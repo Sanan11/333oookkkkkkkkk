@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePersistentState } from '../../store/usePersistentState';
 import { ArrowLeft, Heart, MessageCircle, Repeat2, Send, Share } from 'lucide-react';
 import { ScreenType } from '../../types';
 
@@ -7,7 +8,7 @@ interface ThreadsScreenViewProps {
 }
 
 export function ThreadsScreenView({ onNavigate }: ThreadsScreenViewProps) {
-  const [threads, setThreads] = useState([
+  const [threads, setThreads] = usePersistentState('phone:threads', [
     {
       id: 't1',
       author: 'Ethan',
