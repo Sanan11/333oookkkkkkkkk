@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { ArrowLeft, Download, Edit3, FileDown, FilePlus2, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, FileDown, FilePlus2, Folder, Plus, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 import {
@@ -33,13 +33,21 @@ function downloadText(filename: string, content: string) {
 export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [characters, setCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
+  const [groups, setGroups] = usePersistentState<Array<{ id: string; name: string }>>('phone:character-groups', []);
+  const [selectedGroupId, setSelectedGroupId] = useState('all');
   const [selectedId, setSelectedId] = usePersistentState<string | null>(
     'phone:active-character',
     null,
   );
   const [notice, setNotice] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const selected = characters.find(character => character.id === selectedId) || characters[0] || null;
+  const visibleCharacters = selectedGroupId === 'all'
+    ? characters
+    : characters.filter(character => (character.groupId || 'ungrouped') === selectedGroupId);
+  const selected = characters.find(character => character.id === selectedId)
+    || visibleCharacters[0]
+    || characters[0]
+    || null;
   const [memory, setMemory] = useState<CharacterMemory>(
     () => selected ? getCharacterMemory(selected.id, selected.name) : {
       characterId: 'none',
@@ -102,16 +110,46 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     showNotice('记忆条目已删除');
   };
 
-  const handleImport = async (file?: File) => {
+  const createGroup = () => {
+    const name = window.prompt('新建角色分组名称：');
+    if (!name?.trim()) return;
+    const group = { id: `group-${Date.now()}`, name: name.trim() };
+    setGroups(prev => [...prev, group]);
+    setSelectedGroupId(group.id);
+    showNotice(`已创建分组「${group.name}」`);
+  };
+
+  const renameGroup = (groupId: string) => {
+    const group = groups.find(item => item.id === groupId);
+    if (!group) return;
+    const name = window.prompt('修改分组名称：', group.name);
+    if (!name?.trim()) return;
+    setGroups(prev => prev.map(item => item.id === groupId ? { ...item, name: name.trim() } : item));
+    showNotice('分组名称已更新');
+  };
+
+  const deleteGroup = (groupId: string) => {
+    const group = groups.find(item => item.id === groupId);
+    if (!group || !window.confirm(`删除「${group.name}」？角色不会删除，只会移到“未分组”。`)) return;
+    setGroups(prev => prev.filter(item => item.id !== groupId));
+    setCharacters(prev => prev.map(character => character.groupId === groupId ? { ...character, groupId: null } : character));
+    setSelectedGroupId('all');
+    showNotice('分组已删除，角色已保留');
+  };
+
+  const handleImport = async (file?: File) =>
     if (!file) return;
     try {
       const parsed = await parseCharacterFile(file);
       setCharacters(prev => {
         const existing = prev.findIndex(item => item.id === parsed.id);
+        const groupId = parsed.groupId || (selectedGroupId !== 'all' ? selectedGroupId : null);
+        const nextCharacter = { ...parsed, groupId };
         if (existing >= 0) {
-          return prev.map(item => item.id === parsed.id ? parsed : item);
+          const old = prev[existing];
+          return prev.map(item => item.id === parsed.id ? { ...nextCharacter, groupId: groupId || old.groupId || null } : item);
         }
-        return [parsed, ...prev];
+        return [nextCharacter, ...prev];
       });
       setSelectedId(parsed.id);
       setIsEditing(false);
@@ -211,8 +249,25 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
           </div>
         ) : (
           <div className="p-4 space-y-3">
+            <div className="p-3 rounded-2xl bg-white/50 border border-[rgba(40,36,31,.1)]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782]"><Folder className="w-3 h-3" /> CHARACTER GROUPS</div>
+                <button onClick={createGroup} className="w-6 h-6 rounded-full bg-[#292724] text-white grid place-items-center"><Plus className="w-3 h-3" /></button>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <button onClick={() => setSelectedGroupId('all')} className={`shrink-0 px-3 py-1.5 rounded-full text-[9px] border ${selectedGroupId === 'all' ? 'bg-[#292724] text-white border-[#292724]' : 'bg-white/55 text-[#655f59] border-[rgba(40,36,31,.12)]'}`}>全部 · {characters.length}</button>
+                {groups.map(group => (
+                  <div key={group.id} className="shrink-0 flex items-center rounded-full border border-[rgba(40,36,31,.12)] bg-white/55 overflow-hidden">
+                    <button onClick={() => setSelectedGroupId(group.id)} className={`px-3 py-1.5 text-[9px] ${selectedGroupId === group.id ? 'bg-[#292724] text-white' : 'text-[#655f59]'}`}>{group.name} · {characters.filter(c => c.groupId === group.id).length}</button>
+                    <button onClick={() => renameGroup(group.id)} className="px-1.5 py-1.5 text-[8px] text-[#8b7560]" title="重命名">✎</button>
+                    <button onClick={() => deleteGroup(group.id)} className="px-1.5 py-1.5 text-[8px] text-[#9b625b]" title="删除分组">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {characters.map(character => (
+              {visibleCharacters.map(character => (
                 <button
                   key={character.id}
                   onClick={() => { setSelectedId(character.id); setIsEditing(false); }}
@@ -297,6 +352,18 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                           />
                         </label>
                       ))}
+                      <label className="block">
+                        <span className="text-[8px] font-mono text-[#8b8782]">GROUP</span>
+                        <select
+                          value={selected.groupId || ''}
+                          onChange={e => patchSelected({ groupId: e.target.value || null })}
+                          className="w-full mt-1 bg-white/65 border border-[rgba(40,36,31,.1)] rounded-xl px-2.5 py-2 outline-none"
+                        >
+                          <option value="">未分组</option>
+                          {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
+                        </select>
+                      </label>
+
                       <label className="block">
                         <span className="text-[8px] font-mono text-[#8b8782]">TAGS</span>
                         <input
@@ -388,6 +455,9 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
       </div>
 
       <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">
+        {selectedGroupId === 'all' ? 'CHARACTER ARCHIVE · LOCAL ONLY' : 'CHARACTER GROUP · LOCAL ONLY'}
+      </div>
+      <div className="hidden">      <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">
         CHARACTER ARCHIVE · LOCAL ONLY
       </div>
 
