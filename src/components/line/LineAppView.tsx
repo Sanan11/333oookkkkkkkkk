@@ -108,7 +108,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     desc: '',
   });
 
-  const [masks, setMasks] = usePersistentState('line:masks', []);
+  const [masks, setMasks] = usePersistentState<Array<{ name: string; id: string; desc: string }>>('line:masks', []);
   // Chat Data with Pin, Mute, Draft, and Group capabilities
   const [chatItems, setChatItems] = usePersistentState<LineChatItem[]>('line:chat-items', []);
 
@@ -631,7 +631,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
                 {/* Live Comments List */}
                 {post.commentsList && post.commentsList.length > 0 && (
                   <div className="ml-[59px] mt-2.5 bg-[#f8f8f9] rounded-[9px] p-2.5 space-y-1.5 text-[11px]">
-                    {post.commentsList.map((c, idx) => (
+                    {post.commentsList.map((c: { user: string; text: string }, idx: number) => (
                       <div key={idx} className="leading-snug">
                         <span className="font-semibold text-[#555]">{c.user}: </span>
                         <span className="text-[#444]">{c.text}</span>
