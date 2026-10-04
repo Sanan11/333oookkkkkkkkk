@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowLeft, Database, Download, KeyRound, RotateCcw, Save, Shield, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
+import { testAiConnection } from '../../ai/aiEngine';
 
 interface AppSettings {
   provider: 'gemini' | 'openai-compatible' | 'custom';
@@ -49,6 +50,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const importRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = usePersistentState<AppSettings>('phone:settings', DEFAULT_SETTINGS);
   const [notice, setNotice] = usePersistentState<string>('phone:settings-notice', '');
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   const notify = (message: string) => {
     setNotice(message);
@@ -147,6 +149,24 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
           <div className="mt-3 text-[8px] leading-relaxed text-[#958e86]">
             API Key 会保存在当前浏览器本机。真正接入远程模型时，我们会再加一层后端代理，避免把密钥暴露给页面网络请求。
           </div>
+          <button
+            disabled={isTestingConnection}
+            onClick={async () => {
+              setIsTestingConnection(true);
+              try {
+                const result = await testAiConnection(settings);
+                notify(result.text || 'AI 连接成功');
+              } catch (error) {
+                const message = error instanceof Error ? error.message : 'AI 连接失败';
+                notify(message.length > 72 ? message.slice(0, 72) + '…' : message);
+              } finally {
+                setIsTestingConnection(false);
+              }
+            }}
+            className="mt-3 w-full py-2 rounded-xl bg-[#292724] text-white text-[10px] disabled:opacity-50"
+          >
+            {isTestingConnection ? '正在测试 AI 连接…' : '测试 AI 连接'}
+          </button>
         </section>
 
         <section className="p-4 rounded-2xl bg-[#eee9df] border border-[rgba(40,36,31,.12)]">
