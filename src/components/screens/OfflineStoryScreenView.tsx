@@ -350,12 +350,12 @@ export function OfflineStoryScreenView({ onNavigate }: { onNavigate: (screen: Sc
 
       {!selected && (
         <div className="relative z-10 flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
-          <section className="p-4 rounded-2xl bg-[#292724] text-white overflow-hidden relative shadow-[0_10px_30px_rgba(30,25,20,.14)]">
-            <div className="absolute -right-8 -bottom-10 text-[90px] font-serif opacity-5">STORY</div>
-            <div className="relative text-[8px] font-mono tracking-[2px] text-white/50">OFFLINE / SCENE ENGINE</div>
-            <div className="relative mt-2 text-lg font-serif font-bold">角色发来的邀约，现在真的可以走进去了。</div>
-            <p className="relative mt-2 text-[10px] leading-relaxed text-white/55">LINE 负责“邀约发生”，这里负责“见面发生什么”。角色卡、长期记忆、项目设定与 World Book 会一起进入线下场景。</p>
-            <button onClick={() => onNavigate('chat')} className="relative mt-3 text-[10px] text-white/65">← 去 LINE 看角色的邀约</button>
+          <section className="p-4 rounded-2xl bg-white/65 border border-[rgba(40,36,31,.1)] overflow-hidden relative">
+            <div className="absolute -right-8 -bottom-10 text-[90px] font-serif text-[#d4aab5]/10">STORY</div>
+            <div className="relative text-[8px] font-mono tracking-[2px] text-[#aaa]">OFFLINE / SCENE ENGINE</div>
+            <div className="relative mt-2 text-[17px] font-serif font-bold text-[#292724]">角色发来的邀约，现在真的可以走进去了。</div>
+            <p className="relative mt-2 text-[10px] leading-relaxed text-[#817a72]">LINE 负责“邀约发生”，这里负责“见面发生什么”。角色卡、长期记忆、项目设定与 World Book 会一起进入线下场景。</p>
+            <button onClick={() => onNavigate('chat')} className="relative mt-3 text-[10px] text-[#ae7e89]">← 去 LINE 看角色的邀约</button>
           </section>
 
           {activeEvents.map(event => (
