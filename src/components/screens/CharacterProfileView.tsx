@@ -377,6 +377,16 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                   </div>
                 </div>
 
+                <div className="p-4 rounded-2xl bg-white/60 border border-[rgba(40,36,31,.1)]">
+                  <div className="text-[8px] tracking-[1.5px] font-mono text-[#8b8782] mb-2">LIVE WORLD STATUS</div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div><span className="text-[8px] font-mono text-[#8b8782]">LOCATION</span><div className="mt-1 font-serif-sc">{runtimeState?.location || '未知'}</div></div>
+                    <div><span className="text-[8px] font-mono text-[#8b8782]">ACTIVITY</span><div className="mt-1 font-serif-sc">{runtimeState?.activity || '空闲'}</div></div>
+                    <div><span className="text-[8px] font-mono text-[#8b8782]">MOOD</span><div className="mt-1 font-serif-sc">{runtimeState?.mood || '平静'}</div></div>
+                    <div><span className="text-[8px] font-mono text-[#8b8782]">UNREAD</span><div className="mt-1 font-mono text-[#9b625b]">{runtimeState?.unread || 0}</div></div>
+                  </div>
+                </div>
+
                 <div className="p-4 rounded-2xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
                   <div className="flex items-center justify-between mb-1">
                     <div className="text-[8px] tracking-[1.5px] font-mono text-[#8b8782]">
