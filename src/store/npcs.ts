@@ -27,7 +27,18 @@ export interface SaneNpc {
 const KEY = 'phone:npcs';
 
 export function getNpcs(): SaneNpc[] {
-  return readPersistentState<SaneNpc[]>(KEY, []);
+  const saved = readPersistentState<Partial<SaneNpc>[]>(KEY, []);
+  return saved
+    .map(item => ({
+      ...item,
+      boundCharacterId: item.boundCharacterId || item.sourceCharacterId || '',
+      boundCharacterName: item.boundCharacterName || item.sourceCharacterName || '',
+      active: item.active !== false,
+      canCommentMoments: item.canCommentMoments !== false,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      settingSource: item.settingSource || 'character',
+    }) as SaneNpc)
+    .filter(item => Boolean(item.name));
 }
 
 export function upsertNpc(npc: SaneNpc): void {
