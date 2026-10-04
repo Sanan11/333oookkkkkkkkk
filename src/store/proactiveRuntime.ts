@@ -5,7 +5,6 @@ import { getCharacterMemory } from './characterMemory';
 import { getProjectManifest } from './projectManifest';
 import { readAppSettings } from './appSettings';
 import { generateCreativeText, readStoredAiSettings } from '../ai/aiEngine';
-import { notifyFromRuntime } from './backgroundRuntime';
 
 interface ScheduleItem {
   id: string;
@@ -192,7 +191,12 @@ export async function runProactiveCatchup() {
       state.delivered[character.id] = deliveryKey;
       dirty = true;
 
-      notifyFromRuntime(character.name, message.trim().slice(0, 180));
+      if (settings.notificationEnabled && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(character.name, {
+          body: message.trim().slice(0, 180),
+          tag: 'sane333-proactive-' + character.id,
+        });
+      }
     }
   } catch {
     // Proactive messages must never break the phone runtime.
