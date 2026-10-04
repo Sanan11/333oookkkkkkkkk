@@ -291,7 +291,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
             </button>
 
             <button 
-              onClick={() => onNavigate('character-profile')}
+              onClick={() => onNavigate('offline-story')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
             >
               <div className="w-[64px] h-[64px] rounded-[21px] bg-[var(--icon,rgba(248,245,239,.72))] text-[var(--ink)] border border-[var(--edge,rgba(255,255,255,.6))] backdrop-blur-xl shadow-[0_6px_18px_rgba(52,43,34,.055)] grid place-items-center group-hover:scale-105 transition-transform">
@@ -485,7 +485,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
         style={{ background: 'var(--glass, rgba(248,246,242,.72))' }}
       >
         <button 
-          onClick={() => onNavigate('character-profile')}
+          onClick={() => onNavigate('world-book')}
           className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group"
         >
           <div className="w-[46px] h-[46px] rounded-[15px] bg-[var(--icon,rgba(248,245,239,.72))] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_4px_12px_rgba(52,43,34,.05)] grid place-items-center group-hover:scale-105 group-hover:bg-white transition-all">
@@ -522,7 +522,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
         </button>
 
         <button 
-          onClick={onOpenSheet}
+          onClick={() => onNavigate('settings')}
           className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group"
           title="系统设置与自定义"
         >
