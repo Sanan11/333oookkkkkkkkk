@@ -22,6 +22,17 @@ import {
   FileDown, MessageCircle, Heart
 } from 'lucide-react';
 
+function hasImportedCharacterInStorage(name: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const raw = window.localStorage.getItem('phone:characters');
+    const characters = raw ? JSON.parse(raw) : [];
+    return Array.isArray(characters) && characters.some((character: any) => character?.name === name);
+  } catch {
+    return false;
+  }
+}
+
 interface LineConversationViewProps {
   contactName: string;
   onBack: (draft?: string) => void;
@@ -50,9 +61,10 @@ export function LineConversationView({
 }: LineConversationViewProps) {
   // Input & Messages
   const [inputText, setInputText] = useState(initialDraft);
+  const hasImportedCharacter = hasImportedCharacterInStorage(contactName);
   const [messages, setMessages] = usePersistentState<any[]>(
     `line:conversation:${contactName}`,
-    getInitialChatMessages(contactName),
+    hasImportedCharacter ? [] : getInitialChatMessages(contactName),
   );
 
   // Sheets & Overlays
@@ -108,14 +120,14 @@ export function LineConversationView({
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<number[]>([]);
   const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${contactName}`, [
-    {
+    ...(hasImportedCharacter ? [] : [{
       id: 101,
       contactName: contactName || '顾言',
       sender: 'other',
       text: '那就先休息一会儿。\n不急着做别的。',
       time: '20:33',
       savedAt: '今天 20:35'
-    }
+    }])
   ]);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const [showQuickPhrases, setShowQuickPhrases] = useState(false);
@@ -213,7 +225,7 @@ export function LineConversationView({
   );
 
   // 酒馆世界书条目库 (Lorebook Entries)
-  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${contactName}`, [
+  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${contactName}`, hasImportedCharacter ? [] : [
     {
       id: 'lb1',
       title: '《东京雨夜日常·核心世界书》',
@@ -315,7 +327,13 @@ export function LineConversationView({
   // 状态栏
   const [showRenderedStatusBarModal, setShowRenderedStatusBarModal] = useState(false);
   const [showStatusBarSettings, setShowStatusBarSettings] = useState(false);
-  const [statusData, setStatusData] = usePersistentState(`line:status:${contactName}`, {
+  const [statusData, setStatusData] = usePersistentState(`line:status:${contactName}`, hasImportedCharacter ? {
+    location: '',
+    time: '',
+    activity: '',
+    mood: '',
+    favor: '0',
+  } : {
     location: '在家 · 书房',
     time: '22:45',
     activity: '翻阅摄影集，手边有一杯温热红茶',
@@ -330,7 +348,7 @@ export function LineConversationView({
 
   // 角色个人主页 (Threads / Twitter / LINE 混合风格)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false);
-  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${contactName}`, [
+  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${contactName}`, hasImportedCharacter ? [] : [
     {
       id: 'cp1',
       time: '2小时前',
@@ -369,7 +387,13 @@ export function LineConversationView({
 
   // 线下邀约剧情系统 (Offline Meetup System)
   const [showOfflineInviteModal, setShowOfflineInviteModal] = useState(false);
-  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${contactName}`, {
+  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${contactName}`, hasImportedCharacter ? {
+    location: '',
+    time: '',
+    theme: '',
+    letter: '',
+    inviteFrom: 'other' as 'me' | 'other',
+  } : {
     location: '神保町·雨夜旧书屋二层咖啡阁',
     time: '明晚 19:30',
     theme: '私享旧胶卷洗印与夜谈',
@@ -400,7 +424,7 @@ export function LineConversationView({
 
   // 角色日程
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${contactName}`, [
+  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${contactName}`, hasImportedCharacter ? [] : [
     { id: '1', time: '08:30', title: '起床 · 冲手冲咖啡' },
     { id: '2', time: '12:30', title: '午餐 · 翻阅新寄来的摄影集' },
     { id: '3', time: '16:00', title: '散步 · 顺路买可颂' },
