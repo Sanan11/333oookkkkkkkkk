@@ -737,7 +737,8 @@ export function LineConversationView({
       }
         return;
       } catch (error) {
-        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
+        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';
+        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
       } finally {
         setIsTyping(false);
       }
