@@ -15,7 +15,8 @@ export type ScreenType =
   | 'threads'
   | 'spy-phone'
   | 'settings'
-  | 'offline-story';
+  | 'offline-story'
+  | 'project-studio';
 
 export interface CharacterInfo {
   id: string;
@@ -88,4 +89,20 @@ export interface WidgetConfig {
   musicArtist: string;
   anniversaryDays: number;
   anniversaryText: string;
+}
+
+
+export interface ProjectManifest {
+  id: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  genre: string;
+  language: string;
+  tone: string;
+  globalPrompt: string;
+  activeCharacterId: string | null;
+  activeWorldBookId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
