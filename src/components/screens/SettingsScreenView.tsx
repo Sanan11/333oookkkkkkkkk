@@ -2,8 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, Bell, CheckCircle2, Database, Download, Image as ImageIcon, KeyRound,
   Mic2, RefreshCw, Save, Server, Shield, SlidersHorizontal, Smartphone, Sparkles,
-  Trash2, Volume2, Wifi
-  BellRing
+  Trash2, Volume2, Wifi, BellRing
 } from 'lucide-react';
 import type { ScreenType } from '../../types';
 import type { ImportedCharacter } from '../../data/characterImport';
@@ -307,7 +306,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
           <div className="relative mt-1 text-[9px] text-[#817a72] leading-relaxed">Gemini、OpenAI Compatible、语音、图片、记忆与后台运行，都从这里管理。</div>
         </section>
 
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-6 gap-1.5">
           {[
             ['ai', 'AI'],
             ['voice', '语音'],
