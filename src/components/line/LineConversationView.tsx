@@ -1257,7 +1257,6 @@ export function LineConversationView({
             mediaType: type,
             fileName: file.name,
             mediaRef,
-            imageData: type === 'image' ? mediaUrl : undefined,
             transcript: type === 'voice' ? '（本地语音消息）' : undefined,
             duration: type === 'voice' ? '语音' : undefined,
             time: '刚刚',
@@ -1266,6 +1265,24 @@ export function LineConversationView({
           setMessages(prev => [...prev, newMsg]);
         setSubSheetType(null);
         showToast(`${typeLabels[type]}已发送：${file.name}`);
+
+          if (type === 'voice') {
+            const appSettings = readAppSettings();
+            if (appSettings.sttEnabled && appSettings.sttProvider !== 'browser') {
+              try {
+                const transcript = await transcribeAudio(
+                  file,
+                  file.name,
+                  appSettings,
+                );
+                setMessages(prev => prev.map(message =>
+                  message.id === newMsg.id ? { ...message, transcript } : message
+                ));
+              } catch {
+                // Voice remains sendable even if STT is unavailable.
+              }
+            }
+          }
 
           if (type === 'image') {
           const settings = readStoredAiSettings(importedCharacter?.id, contactName);
