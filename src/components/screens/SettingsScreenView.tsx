@@ -19,6 +19,7 @@ import {
   stopBackgroundRuntime,
   startBackgroundRuntime,
 } from '../../store/backgroundRuntime';
+import { getGitHubSyncConfig, getGitHubToken, pullSnapshotFromGitHub, saveGitHubSyncConfig, saveGitHubToken, syncSnapshotToGitHub, testGitHubSync } from '../../store/githubSync';
 
 function collectLocalData(includeSecrets = true) {
   const data: Record<string, unknown> = {};
@@ -65,6 +66,9 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const [heartbeat, setHeartbeat] = useState(() => getBackgroundHeartbeat());
   const [includeSecretsInBackup, setIncludeSecretsInBackup] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
+  const [githubConfig, setGithubConfig] = useState(() => getGitHubSyncConfig());
+  const [githubToken, setGithubToken] = useState(() => getGitHubToken());
+  const [githubBusy, setGithubBusy] = useState(false);
   const [characters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
   const [characterAiProfiles, setCharacterAiProfiles] = usePersistentState<CharacterAiProfile[]>('phone:character-ai-profiles', []);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
@@ -79,6 +83,41 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const notify = (message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(''), 2200);
+  };
+
+  const saveGithubField = (patch: Parameters<typeof saveGitHubSyncConfig>[0]) => setGithubConfig(saveGitHubSyncConfig(patch));
+
+  const handleGithubTest = async () => {
+    setGithubBusy(true);
+    try { saveGitHubToken(githubToken); const login = await testGitHubSync(githubConfig, githubToken); notify(`GitHub 已连接：${login}`); }
+    catch (error) { notify(error instanceof Error ? error.message : 'GitHub 连接失败'); }
+    finally { setGithubBusy(false); }
+  };
+
+  const handleGithubPush = async () => {
+    setGithubBusy(true);
+    try {
+      saveGitHubToken(githubToken);
+      const result = await syncSnapshotToGitHub(collectLocalData(false), githubConfig, githubToken);
+      setGithubConfig(prev => ({ ...prev, enabled: true, lastSyncedAt: result.syncedAt }));
+      notify('本机数据已同步到 GitHub');
+    } catch (error) { notify(error instanceof Error ? error.message : 'GitHub 同步失败'); }
+    finally { setGithubBusy(false); }
+  };
+
+  const handleGithubPull = async () => {
+    setGithubBusy(true);
+    try {
+      saveGitHubToken(githubToken);
+      const result = await pullSnapshotFromGitHub(githubConfig, githubToken);
+      if (!result.data || typeof result.data !== 'object') throw new Error('GITHUB_DATA_EMPTY');
+      for (const [key, value] of Object.entries(result.data as Record<string, unknown>)) {
+        if (key.startsWith('phone:') || key.startsWith('line:')) localStorage.setItem(key, JSON.stringify(value));
+      }
+      notify('GitHub 数据已恢复；正在重新载入项目');
+      window.setTimeout(() => window.location.reload(), 500);
+    } catch (error) { notify(error instanceof Error ? error.message : 'GitHub 恢复失败'); }
+    finally { setGithubBusy(false); }
   };
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
@@ -591,6 +630,23 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               <button onClick={() => importRef.current?.click()} className="py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" />导入 / 恢复</button>
             </div>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e => importBackup(e.target.files?.[0])} />
+            <div className="mt-2.5 p-3 rounded-xl bg-white/55 border border-[rgba(40,36,31,.1)] space-y-2.5">
+              <div className="flex items-center justify-between"><div><div className="text-[10px] font-semibold">GitHub 数据库</div><div className="text-[8px] text-[#8b8782] mt-0.5">只同步项目 JSON 数据，不使用 Supabase。</div></div><span className="text-[8px] font-mono text-[#8b7560]">{githubConfig.lastSyncedAt ? '已同步' : '未同步'}</span></div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input value={githubConfig.owner} onChange={e => saveGithubField({ owner: e.target.value })} placeholder="Owner" className="p-2 bg-white/75 border border-black/5 rounded-lg text-[9px] outline-none" />
+                <input value={githubConfig.repo} onChange={e => saveGithubField({ repo: e.target.value })} placeholder="Repository" className="p-2 bg-white/75 border border-black/5 rounded-lg text-[9px] outline-none" />
+                <input value={githubConfig.branch} onChange={e => saveGithubField({ branch: e.target.value })} placeholder="Branch" className="p-2 bg-white/75 border border-black/5 rounded-lg text-[9px] outline-none" />
+                <input value={githubConfig.path} onChange={e => saveGithubField({ path: e.target.value })} placeholder="sane333/data.json" className="p-2 bg-white/75 border border-black/5 rounded-lg text-[9px] outline-none" />
+              </div>
+              <input type="password" value={githubToken} onChange={e => { setGithubToken(e.target.value); saveGitHubToken(e.target.value); }} placeholder="GitHub Token（仅本机保存，不进入备份）" className="w-full p-2 bg-white/75 border border-black/5 rounded-lg text-[9px] outline-none" />
+              <div className="grid grid-cols-3 gap-1.5">
+                <button disabled={githubBusy} onClick={handleGithubTest} className="py-2 rounded-lg bg-white border border-black/5 text-[9px] disabled:opacity-50">测试连接</button>
+                <button disabled={githubBusy} onClick={handleGithubPush} className="py-2 rounded-lg bg-[#292724] text-white text-[9px] disabled:opacity-50">上传同步</button>
+                <button disabled={githubBusy} onClick={handleGithubPull} className="py-2 rounded-lg bg-white border border-black/5 text-[9px] disabled:opacity-50">从 GitHub 恢复</button>
+              </div>
+              <div className="text-[8px] leading-relaxed text-[#8b8782]">建议使用只允许该仓库内容读写的 Fine-grained Token。Token 不会写进 GitHub，也不会包含进项目备份。</div>
+            </div>
+
             <button onClick={() => onNavigate('project-studio')} className="mt-2 w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-[#8b7560]" />进入 Project Studio 修改项目</button>
             <button onClick={clearAll} className="mt-2 w-full py-2.5 rounded-xl bg-white/60 border border-[#cba6a0]/30 text-[#9b625b] text-[10px] flex items-center justify-center gap-1.5"><Trash2 className="w-3.5 h-3.5" />清空全部本机数据</button>
           </section>
@@ -652,7 +708,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
             <div>✓ Gemini / OpenAI Compatible</div><div>✓ Vision 输入</div>
             <div>✓ TTS / 浏览器语音</div><div>✓ 图片生成接口</div>
             <div>✓ JSON 全量备份</div><div>✓ PWA / Service Worker</div>
-            <div>→ 主动事件 AI 调度</div><div>→ 云端数据库可选接入</div>
+            <div>→ 主动事件 AI 调度</div><div>✓ GitHub JSON 数据库同步</div>
           </div>
         </section>
       </div>
