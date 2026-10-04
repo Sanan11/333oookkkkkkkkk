@@ -362,7 +362,7 @@ async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
   const body = {
     model: input.settings.model.trim(),
     stream: Boolean(input.settings.streaming),
-    temperature: Math.max(0, Math.min(2, input.temperature ?? settings.temperature ?? 0.85)),
+    temperature: Math.max(0, Math.min(2, input.temperature ?? input.settings.temperature ?? 0.85)),
     max_tokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
     messages: [
       { role: 'system', content: system },
