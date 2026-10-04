@@ -43,7 +43,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
   }, []);
 
   const cities = [
-    { city: 'LOS ANGELES', temp: '22°', sky: 'CLEAR SKY', icon: '☼', note: 'FILM NOTE 08' },
+    { city: 'PRIVATE FRAME', temp: '22°', sky: 'CLEAR SKY', icon: '☼', note: 'FILM NOTE 08' },
     { city: 'LONDON', temp: '18°', sky: 'RAINY NIGHT', icon: '☽', note: 'FILM NOTE 09' },
   ];
   const currentCity = cities[cityIndex];
@@ -140,8 +140,8 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <div className="h-[82px] p-1.5 bg-[#fbf9f5] border border-neutral-200/80 rounded flex flex-col justify-between text-left">
                 <span className="text-[6px] font-mono text-[#8b8782]">MEMO</span>
                 <p className="font-handwriting text-[8.5px] leading-tight text-[#8b7560]">
-                  2026.10.02<br />
-                  傍晚风微凉，咖啡刚好。
+                  NO PRIVATE NOTE<br />
+                  这里还没有私人便签。
                 </p>
                 <span className="font-handwriting text-[7px] text-[#9b625b] text-right">
                   PRIVATE ARCHIVE.
@@ -336,7 +336,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <div className="h-[82px] p-1.5 bg-[#fbf9f5] border border-neutral-200/80 rounded flex flex-col justify-between text-left">
                 <span className="text-[6px] font-mono text-[#8b8782]">DRAFT</span>
                 <p className="font-handwriting text-[8px] leading-tight text-[#8b7560]">
-                  23:45 伦敦雨。<br />
+                  PRIVATE LOG.<br />
                   暂无私人草稿。
                 </p>
                 <span className="font-handwriting text-[7px] text-[#9b625b] text-right">
