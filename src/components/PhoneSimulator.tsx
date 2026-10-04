@@ -13,6 +13,7 @@ import { SpyPhoneScreenView } from './screens/SpyPhoneScreenView';
 import { WorldBookScreenView } from './screens/WorldBookScreenView';
 import { SettingsScreenView } from './screens/SettingsScreenView';
 import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
+import { CalendarScreenView } from './screens/CalendarScreenView';
 import { LineAppView } from './line/LineAppView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 
@@ -147,6 +148,10 @@ export function PhoneSimulator({
 
           {currentScreen === 'offline-story' && (
             <OfflineStoryScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'calendar' && (
+            <CalendarScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'lock' && (
