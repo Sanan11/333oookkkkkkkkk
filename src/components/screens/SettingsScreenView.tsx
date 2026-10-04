@@ -503,8 +503,15 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                   <label className="flex items-center justify-between mt-2 p-2.5 rounded-xl bg-white/55 border border-black/5 text-[9px] text-[#6f6860]"><span>独立记忆引擎</span>
                     <button onClick={() => update('memoryEnabled', !settings.memoryEnabled)} className="font-mono text-[#8b7560]">{settings.memoryEnabled ? 'ON' : 'OFF'}</button>
                   </label>
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-white/55 border border-black/5">
+                    <div className="text-[8px] font-mono text-[#8b8782]">模式专用模型 · 留空则回退到记忆整理模型</div>
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
+                      <label className="text-[8px] text-[#8b8782]">日记<input value={settings.memoryDiaryModel} onChange={e => update('memoryDiaryModel', e.target.value)} placeholder="同记忆模型" className="w-full mt-1 bg-white/75 rounded-lg p-2 text-[9px] font-mono outline-none" /></label>
+                      <label className="text-[8px] text-[#8b8782]">事实<input value={settings.memoryFactsModel} onChange={e => update('memoryFactsModel', e.target.value)} placeholder="同记忆模型" className="w-full mt-1 bg-white/75 rounded-lg p-2 text-[9px] font-mono outline-none" /></label>
+                      <label className="text-[8px] text-[#8b8782]">关系<input value={settings.memoryRelationshipModel} onChange={e => update('memoryRelationshipModel', e.target.value)} placeholder="同记忆模型" className="w-full mt-1 bg-white/75 rounded-lg p-2 text-[9px] font-mono outline-none" /></label>
+                    </div>
+                  </div>
                   <label className="block mt-2.5 text-[8px] text-[#8b8782]">整理频率
-                <label className="block mt-2.5 text-[8px] text-[#8b8782]">整理频率
                   <select value={settings.autoMemoryEveryMessages} onChange={e => update('autoMemoryEveryMessages', Number(e.target.value))} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
                     {[10, 20, 30, 40, 60].map(value => <option key={value} value={value}>每 {value} 条聊天消息</option>)}
                   </select>
