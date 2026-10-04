@@ -5,6 +5,7 @@ import { getCharacterMemory } from './characterMemory';
 import { getProjectManifest } from './projectManifest';
 import { readAppSettings } from './appSettings';
 import { generateCreativeText, readStoredAiSettings } from '../ai/aiEngine';
+import { emitWorldEvent, setCharacterRuntime, syncWorldCharacters } from './worldRuntime';
 
 interface ScheduleItem {
   id: string;
@@ -76,6 +77,16 @@ function appendProactiveMessage(character: ImportedCharacter, text: string) {
       : item
   );
   saveLocal('line:chat-items', updated);
+  emitWorldEvent('character.message', {
+    characterId: character.id,
+    characterName: character.name,
+    data: { preview: text.replace(/\\s+/g, ' ').slice(0, 120), source: 'proactive' },
+  });
+  setCharacterRuntime(character.id, {
+    activity: '刚刚主动联系了你',
+    mood: '想起了你',
+    lastInteractionAt: new Date().toISOString(),
+  }, character.name);
 
   window.dispatchEvent(new CustomEvent('sane333:proactive-message', {
     detail: { characterName: character.name, message },
@@ -158,6 +169,7 @@ export async function runProactiveCatchup() {
 
   const characters = readLocal<ImportedCharacter[]>('phone:characters', []);
   if (!characters.length) return;
+  syncWorldCharacters(characters);
 
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
