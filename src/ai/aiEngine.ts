@@ -120,10 +120,10 @@ function buildWorldBookContext(worldbooks: WorldBook[], inputText: string): stri
       '优先级：' + entry.priority + '；权重：' + entry.weight + '；插入：' + placement,
       '内容：',
       entry.content,
-    ].join('\\n');
+    ].join('\n');
   });
 
-  return sections.join('\\n\\n');
+  return sections.join('\n\n');
 }
 
 export function buildCharacterSystemPrompt(input: AiReplyInput): string {
@@ -141,14 +141,14 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
         '创作者注释：' + (character.creatorNotes || '未填写'),
         '角色系统提示：' + (character.systemPrompt || '未填写'),
         '历史指令：' + (character.postHistoryInstructions || '未填写'),
-      ].join('\\n')
+      ].join('\n')
     : [
         '【角色档案】',
         '姓名：' + p.nickname,
         '关系：' + p.relationship,
         '称呼：' + p.callMe,
         '简介：' + (p.bio || '未填写'),
-      ].join('\\n');
+      ].join('\n');
 
   const personaBlock = persona
     ? [
@@ -158,7 +158,7 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
         '性别：' + (persona.gender || '未设置'),
         '特质：' + (persona.traits || '未填写'),
         '背景：' + (persona.background || '未填写'),
-      ].join('\\n')
+      ].join('\n')
     : '【用户人设】未设置。';
 
   const worldBook = buildWorldBookContext(input.worldbooks || [], input.userMessage);
@@ -179,8 +179,8 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
     '【关系状态】',
     p.relationship + '；TA希望被称为：' + p.callMe,
     '',
-    input.stylePreset ? '【聊天风格预设】\\n' + input.stylePreset : '【聊天风格预设】自然、沉浸、像真实聊天。',
-    input.authorNote ? '【作者注释】\\n' + input.authorNote : '【作者注释】无。',
+    input.stylePreset ? '【聊天风格预设】\n' + input.stylePreset : '【聊天风格预设】自然、沉浸、像真实聊天。',
+    input.authorNote ? '【作者注释】\n' + input.authorNote : '【作者注释】无。',
     '',
     worldBook,
     '',
@@ -188,7 +188,7 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
     '禁止输出 <think>、思维链、隐藏推理或内部分析。',
     '不要描述用户尚未明确做出的动作。',
     '不要把聊天回复写成旁白长文；保持手机消息的阅读节奏。',
-  ].join('\\n');
+  ].join('\n');
 }
 
 function buildConversationMessages(input: AiReplyInput) {
