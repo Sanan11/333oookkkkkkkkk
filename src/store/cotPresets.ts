@@ -103,3 +103,9 @@ export function importCotPresets(raw: string): CotPreset[] {
     updatedAt: new Date().toISOString(),
   })) as CotPreset[];
 }
+
+export type CotAssignments = Partial<Record<CotPresetTarget, string>>;
+const ASSIGN_KEY = 'line:cot-assignments';
+export function getCotAssignments(): CotAssignments { if (typeof window === 'undefined') return {}; try { return JSON.parse(window.localStorage.getItem(ASSIGN_KEY) || '{}'); } catch { return {}; } }
+export function saveCotAssignment(target: CotPresetTarget, presetId: string) { if (typeof window === 'undefined') return; const next={...getCotAssignments(),[target]:presetId}; window.localStorage.setItem(ASSIGN_KEY,JSON.stringify(next)); window.dispatchEvent(new CustomEvent('sane333:cot-assignments-changed')); }
+export function getCotForTarget(target: CotPresetTarget): CotPreset | null { const id=getCotAssignments()[target]; return getCotPresets().find(item=>item.id===id) || getCotPresets().find(item=>item.targets.includes(target)) || null; }
