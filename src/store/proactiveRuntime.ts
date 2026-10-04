@@ -53,8 +53,13 @@ function dayKey(date: Date) {
 }
 
 function appendProactiveMessage(character: ImportedCharacter, text: string) {
-  const key = `line:conversation:${character.name}`;
+  // LINE conversations are keyed by character id when available. Keeping
+  // proactive messages on the same key prevents "notification arrives but
+  // chat opens empty" when the contact was created from an imported card.
+  const key = `line:conversation:${character.id || character.name}`;
+  const legacyKey = `line:conversation:${character.name}`;
   const messages = readLocal<any[]>(key, []);
+  const legacyMessages = key !== legacyKey ? readLocal<any[]>(legacyKey, []) : [];
   const message = {
     id: Date.now(),
     sender: 'other',
@@ -63,19 +68,36 @@ function appendProactiveMessage(character: ImportedCharacter, text: string) {
     time: '刚刚',
     isRead: false,
   };
-  saveLocal(key, [...messages, message]);
+  const merged = [...messages, ...legacyMessages].slice(-200);
+  saveLocal(key, [...merged, message]);
 
   const chatItems = readLocal<any[]>('line:chat-items', []);
-  const updated = chatItems.map(item =>
-    item.name === character.name
-      ? {
-          ...item,
-          preview: text.replace(/\s+/g, ' ').slice(0, 80),
-          time: '刚刚',
-          unread: Number(item.unread || 0) + 1,
-        }
-      : item
-  );
+  const existing = chatItems.find(item => item.characterId === character.id || item.name === character.name);
+  const updated = existing
+    ? chatItems.map(item =>
+        item.characterId === character.id || item.name === character.name
+          ? {
+              ...item,
+              characterId: character.id,
+              preview: text.replace(/\s+/g, ' ').slice(0, 80),
+              time: '刚刚',
+              unread: Number(item.unread || 0) + 1,
+            }
+          : item
+      )
+    : [{
+        id: character.id,
+        characterId: character.id,
+        name: character.name,
+        variantLabel: character.variantLabel || character.characterVersion || '默认版本',
+        time: '刚刚',
+        preview: text.replace(/\s+/g, ' ').slice(0, 80),
+        unread: 1,
+        isPinned: false,
+        isMuted: false,
+        draft: '',
+        isGroup: false,
+      }, ...chatItems];
   saveLocal('line:chat-items', updated);
   emitWorldEvent('character.message', {
     characterId: character.id,
