@@ -120,7 +120,12 @@ async function generateProactiveMessage(
   schedule: ScheduleItem,
 ): Promise<string> {
   const settings = readStoredAiSettings();
-  if (!settings.apiKey.trim()) throw new Error('AI_NOT_CONFIGURED');
+  const appSettings = readAppSettings();
+  const proactiveModel = appSettings.proactiveModel.trim();
+  const proactiveSettings = proactiveModel
+    ? { ...settings, model: proactiveModel, temperature: appSettings.proactiveTemperature }
+    : { ...settings, temperature: appSettings.proactiveTemperature };
+  if (!proactiveSettings.apiKey.trim()) throw new Error('AI_NOT_CONFIGURED');
 
   const profile = getCharacterProfile(character.name);
   const memory = getCharacterMemory(character.id, character.name);
@@ -181,7 +186,7 @@ async function generateProactiveMessage(
       '请结合角色当前生活状态和最近聊天，发出一条自然的主动消息。',
       '控制在适合手机聊天的长度，不要解释你为什么主动联系。',
     ].join('\n'),
-    temperature: Math.min(1, settings.temperature ?? 0.85),
+    temperature: proactiveSettings.temperature ?? 0.85,
   });
 }
 
