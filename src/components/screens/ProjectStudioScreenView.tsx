@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowLeft, BookOpen, Database, Download, FileText, KeyRound, Save, Settings2, Users } from 'lucide-react';
 import type { ProjectManifest, ScreenType, WorldBook } from '../../types';
 import type { ImportedCharacter } from '../../data/characterImport';
@@ -40,6 +40,7 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
   const [personas] = usePersistentState<PersonaItem[]>('line:user-personas', []);
   const [notice, setNotice] = useState('');
   const [openSection, setOpenSection] = useState<'project' | 'context' | 'data'>('project');
+  const importRef = useRef<HTMLInputElement>(null);
 
   const activeCharacter = characters.find(item => item.id === manifest.activeCharacterId) || null;
   const activeWorldBook = worldbooks.find(item => item.id === manifest.activeWorldBookId) || null;
@@ -79,6 +80,31 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
     }
     downloadJson((manifest.name || 'sane333') + '-project.json', { version: 2, exportedAt: new Date().toISOString(), project: manifest, data });
     notify('项目快照已导出');
+  };
+
+  const importProjectSnapshot = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const data = parsed?.data;
+      if (!data || typeof data !== 'object') throw new Error('项目快照格式不正确');
+      for (const [key, value] of Object.entries(data)) {
+        if (!key.startsWith('phone:') && !key.startsWith('line:')) continue;
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+      if (parsed.project && typeof parsed.project === 'object') {
+        const next = { ...DEFAULT_PROJECT_MANIFEST, ...parsed.project, updatedAt: new Date().toISOString() };
+        localStorage.setItem('phone:project-manifest', JSON.stringify(next));
+        setManifest(next);
+      }
+      setCharacters(prev => prev);
+      setWorldbooks(prev => prev);
+      notify('项目快照已恢复；重新进入其他页面即可刷新全部数据');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '恢复项目失败');
+    } finally {
+      if (importRef.current) importRef.current.value = '';
+    }
   };
 
   return (
@@ -176,6 +202,8 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
             <button onClick={() => onNavigate('settings')} className="w-full py-2.5 rounded-xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)] text-[10px] text-left px-3 flex items-center gap-2"><Settings2 className="w-3.5 h-3.5 text-[#8b7560]" /> AI / 数据 / 备份设置</button>
             <button onClick={createStarterBook} className="w-full py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5"><BookOpen className="w-3.5 h-3.5" /> 新建空世界书</button>
             <button onClick={exportProjectSnapshot} className="w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" /> 导出完整项目快照</button>
+            <button onClick={() => importRef.current?.click()} className="w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" /> 恢复项目快照</button>
+            <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e => importProjectSnapshot(e.target.files?.[0])} />
           </section>
         )}
       </div>
