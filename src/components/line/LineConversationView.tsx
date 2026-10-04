@@ -4,6 +4,7 @@ import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
 import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
 import { getCharacterMemory } from '../../store/characterMemory';
+import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
@@ -199,6 +200,7 @@ export function LineConversationView({
   const importedCharacter = importedCharacters.find(character => character.name === contactName) || null;
   const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
   const characterMemory = getCharacterMemory(importedCharacter?.id || contactName, contactName);
+  const projectManifest = getProjectManifest();
 
   // 酒馆角色核心档案
   const [characterProfile, setCharacterProfile] = usePersistentState(
@@ -526,6 +528,7 @@ export function LineConversationView({
         persona: activePersona,
         worldbooks,
         memory: characterMemory,
+        project: projectManifest,
         messages: [...messages, newMsg],
         userMessage: userText,
         isGroup,
