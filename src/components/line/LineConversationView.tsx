@@ -1180,6 +1180,7 @@ export function LineConversationView({
       showToast('语音正在生成……');
       try {
         const result = await generateSpeech(prompt, settings);
+        if (!result) throw new Error('语音生成失败');
         const mediaRef = result.url ? await putMedia(result.url) : undefined;
         setMessages((prev) => [...prev, {
           id: Date.now(),
