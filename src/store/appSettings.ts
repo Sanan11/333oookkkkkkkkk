@@ -15,7 +15,12 @@ export interface AppSettings {
   memoryEnabled: boolean;
   memoryMode: 'hybrid' | 'diary' | 'facts' | 'relationship';
   memoryModel: string;
+  memoryDiaryModel: string;
+  memoryFactsModel: string;
+  memoryRelationshipModel: string;
   memoryTemperature: number;
+  proactiveModel: string;
+  proactiveTemperature: number;
   memoryContextMessages: number;
 
   voiceEnabled: boolean;
@@ -71,7 +76,12 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   memoryEnabled: true,
   memoryMode: 'hybrid',
   memoryModel: 'gemini-2.5-flash',
+  memoryDiaryModel: '',
+  memoryFactsModel: '',
+  memoryRelationshipModel: '',
   memoryTemperature: 0.2,
+  proactiveModel: '',
+  proactiveTemperature: 0.85,
   memoryContextMessages: 40,
 
   voiceEnabled: false,
