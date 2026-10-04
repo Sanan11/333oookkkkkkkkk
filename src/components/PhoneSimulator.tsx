@@ -21,6 +21,7 @@ import { LineAppView } from './line/LineAppView';
 import { LockScreenView } from './screens/LockScreenView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 import { playAppSound, type AppSoundKind } from '../store/soundManager';
+import { runProactiveCatchup } from '../store/proactiveRuntime';
 
 interface PhoneSimulatorProps {
   themeMode: ThemeMode;
@@ -41,6 +42,17 @@ export function PhoneSimulator({
   const handleToggleTheme = () => {
     onSelectTheme(isDark ? 'nordic-light' : 'dark-luxury');
   };
+
+  useEffect(() => {
+    // The phone itself owns the world clock: proactive messages can arrive
+    // while the user is on Home, Music, Notes, etc. — not only inside LINE.
+    void runProactiveCatchup();
+    const interval = window.setInterval(() => {
+      void runProactiveCatchup();
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleSound = (event: Event) => {
