@@ -44,6 +44,40 @@ export interface CharacterProfile {
   bio?: string;
 }
 
+export interface WorldBookEntry {
+  id: string;
+  name: string;
+  keywords: string[];
+  content: string;
+  enabled: boolean;
+  priority: number;
+  weight: number;
+  insertion: 'before' | 'after' | 'depth';
+  depth: number;
+}
+
+export interface WorldBook {
+  id: string;
+  name: string;
+  description: string;
+  entries: WorldBookEntry[];
+  enabled: boolean;
+  updatedAt: string;
+}
+
+export interface OfflineEvent {
+  id: string;
+  characterId: string;
+  characterName: string;
+  title: string;
+  location: string;
+  time: string;
+  theme: string;
+  letter: string;
+  status: 'draft' | 'pending' | 'accepted' | 'declined' | 'in-progress' | 'completed';
+  createdAt: string;
+}
+
 export interface WidgetConfig {
   weatherCity: string;
   weatherTemp: string;
