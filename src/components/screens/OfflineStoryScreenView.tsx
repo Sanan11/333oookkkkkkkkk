@@ -12,6 +12,7 @@ import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterMemory } from '../../store/characterMemory';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { generateCreativeText, readStoredAiSettings } from '../../ai/aiEngine';
+import { setCurrentScene, setCharacterRuntime } from '../../store/worldRuntime';
 
 const statusLabel: Record<OfflineEvent['status'], string> = {
   draft: '草稿',
@@ -156,7 +157,16 @@ export function OfflineStoryScreenView({ onNavigate }: { onNavigate: (screen: Sc
         sceneLog: [{ id: 'scene-' + Date.now(), speaker: 'narrator', text, createdAt: nowIso() }],
         updatedAt: nowIso(),
       });
-      if (updated) setEvents(getOfflineEvents());
+      if (updated) {
+        setEvents(getOfflineEvents());
+        setCurrentScene(event.id);
+        setCharacterRuntime(event.characterId, {
+          location: event.location,
+          activity: '正在与你见面',
+          mood: '在等你',
+          lastInteractionAt: nowIso(),
+        }, event.characterName);
+      }
       notify('线下场景已生成');
     } catch (error) {
       notify(error instanceof Error ? error.message : '线下场景生成失败');
@@ -221,6 +231,8 @@ export function OfflineStoryScreenView({ onNavigate }: { onNavigate: (screen: Sc
   const completeScene = () => {
     if (!selected) return;
     updateOfflineEvent(selected.id, { status: 'completed', updatedAt: nowIso() });
+    setCurrentScene(null);
+    setCharacterRuntime(selected.characterId, { activity: '刚结束一次见面' }, selected.characterName);
     sync();
     notify('这一幕已存档');
   };
