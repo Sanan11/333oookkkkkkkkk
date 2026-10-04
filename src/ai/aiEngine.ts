@@ -33,6 +33,8 @@ export interface AiReplyInput {
     transcript?: string;
     type?: string;
     imageData?: string;
+    isRecalled?: boolean;
+    isRecalledByOther?: boolean;
   }>;
   userMessage: string;
   isGroup?: boolean;
