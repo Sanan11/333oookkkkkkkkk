@@ -1,3 +1,4 @@
+import YAML from 'yaml';
 export interface ImportedCharacter {
   id: string;
   name: string;
@@ -168,25 +169,11 @@ export async function parseCharacterFile(file: File): Promise<ImportedCharacter>
     return normalizeCharacter(JSON.parse(text), 'json');
   }
 
-  // Lightweight YAML fallback for common Character Card exports.
-  // Full YAML structures can still be pasted as JSON in the importer.
+  // Full YAML parsing supports nested Character Card documents.
   if (lower.endsWith('.yaml') || lower.endsWith('.yml')) {
-    const parsed: Record<string, any> = {};
-    for (const rawLine of text.split(/\r?\n/)) {
-      const line = rawLine.replace(/^\s*[-*]\s*/, '').trim();
-      if (!line || line.startsWith('#') || !line.includes(':')) continue;
-      const index = line.indexOf(':');
-      const key = line.slice(0, index).trim().replace(/^['"]|['"]$/g, '');
-      const value = line.slice(index + 1).trim();
-      if (value.startsWith('[') && value.endsWith(']')) {
-        parsed[key] = value
-          .slice(1, -1)
-          .split(',')
-          .map(v => v.trim().replace(/^['"]|['"]$/g, ''))
-          .filter(Boolean);
-      } else {
-        parsed[key] = value.replace(/^['"]|['"]$/g, '');
-      }
+    const parsed = YAML.parse(text);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('YAML 角色卡内容不是有效对象。');
     }
     return normalizeCharacter(parsed, 'yaml');
   }
