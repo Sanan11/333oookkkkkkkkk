@@ -33,6 +33,7 @@ export interface AiReplyInput {
     transcript?: string;
     type?: string;
     imageData?: string;
+    senderName?: string;
     isRecalled?: boolean;
     isRecalledByOther?: boolean;
   }>;
@@ -206,7 +207,9 @@ function buildConversationMessages(input: AiReplyInput) {
     .slice(-limit)
     .map(message => ({
       role: message.sender === 'other' ? 'assistant' : 'user',
-      content: message.text || message.transcript || '[多媒体消息]',
+      content: input.isGroup && message.senderName
+        ? '[' + message.senderName + '] ' + (message.text || message.transcript || '[多媒体消息]')
+        : message.text || message.transcript || '[多媒体消息]',
       imageData: message.imageData,
     }));
 
