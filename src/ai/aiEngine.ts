@@ -36,6 +36,9 @@ export interface AiReplyInput {
   }>;
   userMessage: string;
   isGroup?: boolean;
+  authorNote?: string;
+  stylePreset?: string;
+  temperature?: number;
   onDelta?: (delta: string) => void;
 }
 
@@ -176,6 +179,9 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
     '【关系状态】',
     p.relationship + '；TA希望被称为：' + p.callMe,
     '',
+    input.stylePreset ? '【聊天风格预设】\\n' + input.stylePreset : '【聊天风格预设】自然、沉浸、像真实聊天。',
+    input.authorNote ? '【作者注释】\\n' + input.authorNote : '【作者注释】无。',
+    '',
     worldBook,
     '',
     '【输出约束】',
@@ -312,7 +318,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
       parts: [{ text: message.content }],
     })),
     generationConfig: {
-      temperature: 0.85,
+      temperature: Math.max(0, Math.min(2, input.temperature ?? 0.85)),
       maxOutputTokens: 1200,
     },
   };
@@ -347,7 +353,7 @@ async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
   const body = {
     model: input.settings.model.trim(),
     stream: Boolean(input.settings.streaming),
-    temperature: 0.85,
+    temperature: Math.max(0, Math.min(2, input.temperature ?? 0.85)),
     max_tokens: 1200,
     messages: [
       { role: 'system', content: system },
