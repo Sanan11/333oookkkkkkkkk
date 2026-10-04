@@ -41,7 +41,15 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
 
     updateTime();
     const timer = setInterval(updateTime, 10000);
-    return () => clearInterval(timer);
+    const refreshWorld = () => setWorldUnread(getWorldUnreadCount());
+    refreshWorld();
+    window.addEventListener('sane333:world-state-changed', refreshWorld);
+    window.addEventListener('sane333:world-event', refreshWorld);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('sane333:world-state-changed', refreshWorld);
+      window.removeEventListener('sane333:world-event', refreshWorld);
+    };
   }, []);
 
   const cities = [
@@ -131,7 +139,14 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
             </div>
           </div>
 
-          {/* Film Photo Polaroid pinned diagonally (Click to Flip!) */}
+          {worldUnread > 0 && (
+            <button onClick={() => onNavigate('chat')} className="absolute z-20 left-[26px] right-[26px] top-[266px] flex items-center justify-between px-3 py-2 rounded-full bg-white/75 border border-[rgba(40,36,31,.09)] shadow-[0_5px_18px_rgba(45,37,30,.05)] backdrop-blur-md text-[8px] font-mono text-[#6f685f]">
+              <span>WORLD · 有新的世界动态</span>
+              <span className="text-[#9b625b]">{worldUnread} NEW</span>
+            </button>
+          )}
+
+          {/* Film Photo Polaroid pinned diagonally (Click to Flip!) */
           <div 
             onClick={() => setIsPhotoFlipped(!isPhotoFlipped)}
             className="absolute z-10 right-[17px] top-[181px] w-[84px] h-[106px] rotate-[4deg] p-[5px_5px_15px] bg-[var(--paper,#eee9df)] shadow-[0_7px_18px_rgba(45,37,30,.09)] opacity-90 cursor-pointer hover:rotate-0 hover:scale-105 transition-all group"
@@ -261,7 +276,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                   <use href="#chat"/>
                 </svg>
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#9b625b] text-white text-[9px] font-bold flex items-center justify-center">
-                  2
+                  {worldUnread > 99 ? '99+' : worldUnread}
                 </span>
               </div>
               <span className="font-medium">LINE</span>
