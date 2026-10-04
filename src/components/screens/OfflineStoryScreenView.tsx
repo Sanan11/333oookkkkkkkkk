@@ -398,7 +398,7 @@ export function OfflineStoryScreenView({ onNavigate }: { onNavigate: (screen: Sc
         </div>
       )}
 
-      <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">OFFLINE STORY ARCHIVE · SANE333</div>
+      <div className="relative z-10 p-3 text-center text-[9px] text-[#8b8782] font-mono border-t border-[rgba(40,36,31,.1)]">OFFLINE STORY ARCHIVE · PRIVATE DEVICE</div>
       {notice && <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-16 bg-[#292724] text-white px-3.5 py-2 rounded-full text-[10px] shadow-lg">{notice}</div>}
     </div>
   );
