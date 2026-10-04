@@ -31,6 +31,16 @@ export interface CharacterInfo {
   unreadCount?: number;
 }
 
+export interface CharacterProfile {
+  nickname: string;
+  birthday: string;
+  relationship: string;
+  canAutoChangeRelation: boolean;
+  callMe: string;
+  selectedLorebook: string;
+  bio?: string;
+}
+
 export interface WidgetConfig {
   weatherCity: string;
   weatherTemp: string;
