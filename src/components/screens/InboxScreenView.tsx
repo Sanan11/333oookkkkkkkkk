@@ -8,7 +8,7 @@ interface InboxScreenViewProps {
 }
 
 export function InboxScreenView({ onNavigate, onSelectChat }: InboxScreenViewProps) {
-  const letters: Array<{ id: string; name: string; subject: string; time: string; preview: string }> = [];
+  const letters: Array<{ id: string; name: string; unread: number; date: string; location: string; snippet: string }> = [];
   return (
     <div 
       className="relative w-full h-full flex flex-col justify-between select-none overflow-hidden"
