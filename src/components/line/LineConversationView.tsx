@@ -12,6 +12,7 @@ import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
 import { getLineGroupByName } from '../../store/lineGroups';
+import { getGroupPreset, getGroupPresets } from '../../store/groupPresets';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -434,7 +435,8 @@ export function LineConversationView({
     { from: '林安', to: '顾言', relation: '老友 · 默契深沉' },
   ]);
   const [groupLorebookActive, setGroupLorebookActive] = useState('《东京雨夜日常·核心世界书》');
-  const [groupPresetStyle, setGroupPresetStyle] = useState<'casual' | 'drama' | 'deep'>('casual');
+  const [groupPresetId, setGroupPresetId] = usePersistentState(`line:group-preset:${contactName}`, 'online-natural');
+  const activeGroupPreset = getGroupPreset(groupPresetId, 'online');
   const [groupNoticeText, setGroupNoticeText] = useState('周末大家聚会，地点定在原宿下北泽唱片咖啡馆，不见不散~');
 
   // 角色日程
@@ -686,7 +688,7 @@ export function LineConversationView({
       }
       const mentioned = groupAiMembers.filter(({ member }) => userText.includes('@' + member.name) || userText.includes('@' + (member.nickname || '')));
       const pool = mentioned.length ? mentioned : groupAiMembers;
-      const responders = pool.slice(0, mentioned.length ? 1 : Math.min(pool.length, userText.length > 18 ? 2 : 1));
+      const responders = pool.slice(0, mentioned.length && activeGroupPreset.mentionPriority ? 1 : Math.min(pool.length, activeGroupPreset.maxResponders));
       let workingMessages: any[] = [...messages, newMsg];
       for (let index = 0; index < responders.length; index += 1) {
         const { character } = responders[index];
@@ -707,7 +709,7 @@ export function LineConversationView({
           messages: workingMessages,
           userMessage: userText,
           isGroup: true,
-          authorNote: [authorsNote, groupNoticeText ? '群公告：' + groupNoticeText : ''].filter(Boolean).join('\\n'),
+          authorNote: [authorsNote, '群聊预设：' + activeGroupPreset.name, activeGroupPreset.systemPrompt, groupNoticeText ? '群公告：' + groupNoticeText : ''].filter(Boolean).join('\\n'),
           stylePreset: activeCotPreset?.title || selectedPreset,
           temperature: Number(presetTemp) || 0.85,
           onDelta: delta => {
@@ -3330,29 +3332,22 @@ export function LineConversationView({
                     </div>
                   </div>
 
-                  {/* 群聊独立多角色预设文风 */}
+                  {/* 群聊独立预设 */}
                   <div className="border-t border-[#f2f2f3] pt-2.5">
-                    <div className="text-[#444] font-medium mb-1.5">群聊独立预设文风</div>
-                    <div className="grid grid-cols-3 gap-1.5 text-center text-[10.5px]">
-                      {[
-                        { id: 'casual', label: '随性日常', desc: '真实群聊吐槽' },
-                        { id: 'drama', label: '多声部博弈', desc: '微表情暗流' },
-                        { id: 'deep', label: '剧情推演', desc: '酒馆事件模式' },
-                      ].map((st) => (
-                        <button
-                          key={st.id}
-                          onClick={() => setGroupPresetStyle(st.id as any)}
-                          className={`p-2 rounded-lg border text-left cursor-pointer transition-colors ${
-                            groupPresetStyle === st.id
-                              ? 'bg-[#faf1f3] border-[#d4aab5] text-[#ae7e89] font-medium'
-                              : 'bg-[#fafafa] border-[#eee] text-[#666]'
-                          }`}
-                        >
-                          <div className="font-semibold">{st.label}</div>
-                          <div className="text-[9px] text-[#aaa] mt-0.5">{st.desc}</div>
-                        </button>
-                      ))}
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="text-[#444] font-medium">群聊预设</div>
+                      <span className="text-[8px] text-[#9a6c78] font-mono">{activeGroupPreset.kind === 'online' ? 'ONLINE' : 'OFFLINE'}</span>
                     </div>
+                    <select
+                      value={groupPresetId}
+                      onChange={(e) => setGroupPresetId(e.target.value)}
+                      className="w-full p-2 bg-[#fafafa] border border-[#e8e8e9] rounded-[10px] text-[10px] text-[#555] outline-none"
+                    >
+                      {getGroupPresets().filter(preset => preset.kind === 'online').map(preset => (
+                        <option key={preset.id} value={preset.id}>{preset.name}</option>
+                      ))}
+                    </select>
+                    <div className="mt-1.5 text-[9px] text-[#999] leading-relaxed">{activeGroupPreset.description}</div>
                   </div>
                 </div>
               </div>
