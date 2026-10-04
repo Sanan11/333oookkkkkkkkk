@@ -1121,10 +1121,14 @@ export function LineConversationView({
                   <div className={`w-[38px] h-[38px] rounded-full bg-[#f1f1f2] border border-[#ededee] flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 group-hover:ring-2 group-hover:ring-[#d4aab5]/50 transition-all ${
                     nudgeAvatar ? 'scale-110 ring-2 ring-[#d4aab5]' : ''
                   }`}>
-                    <svg className="w-6 h-6 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    {importedCharacter?.avatar ? (
+                      <img src={importedCharacter.avatar} alt={characterProfile.nickname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <svg className="w-6 h-6 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <circle cx="12" cy="8" r="4" />
                       <path d="M4 21c.8-4 3.5-6 8-6s7.2 2 8 6" />
                     </svg>
+                    )}
                   </div>
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#b9d2c1] border border-white" />
                 </div>
@@ -1322,10 +1326,14 @@ export function LineConversationView({
                   }`}
                   title={isGroup ? '单击@TA，双击拍一拍' : '单击查看状态栏与个人主页，双击拍一拍'}
                 >
-                  <svg className="w-5 h-5 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  {importedCharacter?.avatar ? (
+                    <img src={importedCharacter.avatar} alt={characterProfile.nickname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <svg className="w-5 h-5 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <circle cx="12" cy="8" r="4" />
                     <path d="M4 21c.8-4 3.5-6 8-6s7.2 2 8 6" />
                   </svg>
+                  )}
                 </div>
               )}
 
