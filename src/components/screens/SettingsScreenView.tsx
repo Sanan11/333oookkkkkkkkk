@@ -7,7 +7,7 @@ import {
 import type { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
-import { testAiConnection } from '../../ai/aiEngine';
+import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
 import {
   getBackgroundHeartbeat,
@@ -16,7 +16,7 @@ import {
   startBackgroundRuntime,
 } from '../../store/backgroundRuntime';
 
-function collectLocalData() {
+function collectLocalData(includeSecrets = true) {
   const data: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
@@ -24,6 +24,13 @@ function collectLocalData() {
     try { data[key] = JSON.parse(localStorage.getItem(key) || 'null'); }
     catch { data[key] = localStorage.getItem(key); }
   }
+
+  if (!includeSecrets && data['phone:settings'] && typeof data['phone:settings'] === 'object') {
+    const safe = { ...(data['phone:settings'] as Record<string, unknown>) };
+    for (const key of ['apiKey', 'voiceApiKey', 'imageApiKey']) safe[key] = '';
+    data['phone:settings'] = safe;
+  }
+
   return data;
 }
 
@@ -49,7 +56,10 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const [notice, setNotice] = useState('');
   const [openSection, setOpenSection] = useState<'ai' | 'voice' | 'image' | 'data' | 'background'>('ai');
   const [testing, setTesting] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [heartbeat, setHeartbeat] = useState(() => getBackgroundHeartbeat());
+  const [includeSecretsInBackup, setIncludeSecretsInBackup] = useState(false);
 
   const localStats = useMemo(() => {
     const data = collectLocalData();
@@ -213,15 +223,51 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                 <input type="password" value={settings.apiKey} onChange={e => update('apiKey', e.target.value)} placeholder="只保存在这台设备的浏览器本地" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-xs outline-none" />
               </label>
               <label className="block text-[9px] text-[#7e7770]">Model
-                <input value={settings.model} onChange={e => update('model', e.target.value)} placeholder="例如 gemini-2.5-flash / 你的第三方模型 ID" className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+                <div className="flex gap-1.5 mt-1">
+                  <input value={settings.model} onChange={e => update('model', e.target.value)} placeholder="例如 gemini-2.5-flash / 你的第三方模型 ID" className="flex-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none font-mono" />
+                  {settings.provider !== 'gemini' && (
+                    <button
+                      disabled={loadingModels}
+                      onClick={async () => {
+                        setLoadingModels(true);
+                        try {
+                          const models = await listOpenAiCompatibleModels(settings);
+                          setAvailableModels(models);
+                          notify(models.length ? `读取到 ${models.length} 个模型` : '接口没有返回模型列表');
+                        } catch (error) {
+                          notify(error instanceof Error ? error.message : '读取模型失败');
+                        } finally {
+                          setLoadingModels(false);
+                        }
+                      }}
+                      className="px-2.5 rounded-xl bg-[#292724] text-white text-[9px] disabled:opacity-40"
+                      title="从兼容接口读取 /models"
+                    >
+                      {loadingModels ? '…' : '读取'}
+                    </button>
+                  )}
+                </div>
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              {availableModels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {availableModels.slice(0, 18).map(model => (
+                    <button key={model} onClick={() => update('model', model)} className="px-2 py-1 rounded-full bg-white/60 border border-black/5 text-[8px] font-mono text-[#675f58]">
+                      {model}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-2">
                 <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">上下文
                   <input type="number" min={4} max={200} value={settings.contextLength} onChange={e => update('contextLength', Math.max(4, Math.min(200, Number(e.target.value) || 24)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
                   <span className="text-[8px] text-[#938b83]">轮</span>
                 </label>
                 <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">Temperature
                   <input type="number" step="0.05" min={0} max={2} value={settings.temperature} onChange={e => update('temperature', Math.max(0, Math.min(2, Number(e.target.value) || 0.85)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
+                </label>
+                <label className="bg-white/55 rounded-xl p-2.5 text-[9px]">最大输出
+                  <input type="number" min={128} max={12000} value={settings.maxOutputTokens} onChange={e => update('maxOutputTokens', Math.max(128, Math.min(12000, Number(e.target.value) || 1200)))} className="w-full mt-1 bg-transparent outline-none font-mono text-xs" />
+                  <span className="text-[8px] text-[#938b83]">tokens</span>
                 </label>
                 <button onClick={() => update('streaming', !settings.streaming)} className="bg-white/55 rounded-xl p-2.5 text-left text-[9px]">
                   Streaming
@@ -348,8 +394,13 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               <div className="p-3 rounded-xl bg-white/55"><div className="text-lg font-serif font-bold text-[#292724]">{localStats.keys}</div><div className="text-[8px] text-[#8b8782]">本机数据项</div></div>
               <div className="p-3 rounded-xl bg-white/55"><div className="text-lg font-serif font-bold text-[#292724]">{prettyBytes(localStats.size)}</div><div className="text-[8px] text-[#8b8782]">估算占用</div></div>
             </div>
+            <label className="mt-2.5 flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/55 border border-black/5 text-[9px] text-[#645c55]">
+              <span>备份包含 API 密钥</span>
+              <input type="checkbox" checked={includeSecretsInBackup} onChange={e => setIncludeSecretsInBackup(e.target.checked)} />
+            </label>
+            <div className="mt-1 text-[8px] text-[#8b8782]">默认不导出密钥，更适合把备份文件留给自己以外的环境。</div>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => downloadJson(`sane333-backup-${Date.now()}.json`, { version: 3, exportedAt: new Date().toISOString(), data: collectLocalData() })} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" />导出全部数据</button>
+              <button onClick={() => downloadJson(`sane333-backup-${Date.now()}.json`, { version: 3, exportedAt: new Date().toISOString(), data: collectLocalData(includeSecretsInBackup) })} className="py-2.5 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5"><Download className="w-3.5 h-3.5" />导出全部数据</button>
               <button onClick={() => importRef.current?.click()} className="py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Save className="w-3.5 h-3.5" />导入 / 恢复</button>
             </div>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e => importBackup(e.target.files?.[0])} />
