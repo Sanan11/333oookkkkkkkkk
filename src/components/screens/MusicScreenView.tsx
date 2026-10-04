@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { usePersistentState } from '../../store/usePersistentState';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Heart, Disc, Volume2 } from 'lucide-react';
 import { ScreenType } from '../../types';
 
@@ -8,8 +9,8 @@ interface MusicScreenViewProps {
 }
 
 export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [liked, setLiked] = useState(true);
+  const [isPlaying, setIsPlaying] = usePersistentState('phone:music-playing', true);
+  const [liked, setLiked] = usePersistentState('phone:music-liked', true);
 
   return (
     <div 
