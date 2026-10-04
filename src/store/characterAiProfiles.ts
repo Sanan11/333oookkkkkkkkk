@@ -84,6 +84,7 @@ export function mergeCharacterAiSettings(base: AiSettings, profile: CharacterAiP
     model: profile.model,
     streaming: profile.streaming,
     contextLength: profile.contextLength,
+    maxOutputTokens: profile.maxOutputTokens,
     temperature: profile.temperature,
   };
 }
