@@ -981,26 +981,69 @@ export function LineConversationView({
     showToast(from === 'other' ? '角色已向你发起线下邀约 ✉️' : '已向角色发送线下邀约 ✉️');
   };
 
-  // 接受线下邀约
-  const handleAcceptInvite = (msgId: number) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, inviteStatus: 'accepted' } : m))
-    );
+  // 接受线下邀约：真正交给当前角色模型生成赴约回应。
+  const handleAcceptInvite = async (msgId: number) => {
+    setMessages(prev => prev.map(message =>
+      message.id === msgId ? { ...message, inviteStatus: 'accepted' } : message
+    ));
     updateOfflineEvent(`offline-${msgId}`, { status: 'accepted' });
-    setStatusData((prev) => ({ ...prev, favor: String(Number(prev.favor) + 5) }));
+    setStatusData(prev => ({ ...prev, favor: String(Number(prev.favor || 0) + 5) }));
     showToast('已确认赴约！好感度 +5 💖');
 
-    setTimeout(() => {
-      const replyMsg = {
+    const invite = messages.find(message => message.id === msgId);
+    const settings = readStoredAiSettings();
+    if (!settings.apiKey.trim()) return;
+
+    try {
+      const reply = await generateCreativeText({
+        settings,
+        systemPrompt: [
+          '你正在 Sane333 LINE 中扮演当前角色。',
+          '用户刚刚接受了你发出的线下见面邀约。',
+          '只输出角色下一条真实聊天消息。',
+          '不要替用户说话，不要替用户行动，不要输出思维链，不要写成旁白。',
+          '',
+          '【角色】',
+          importedCharacter ? [
+            importedCharacter.name,
+            importedCharacter.description,
+            importedCharacter.personality,
+            importedCharacter.scenario,
+            importedCharacter.systemPrompt,
+          ].join('\n') : characterProfile.nickname + ' · ' + characterProfile.relationship,
+          '',
+          '【长期记忆】',
+          characterMemory.summary,
+          ...characterMemory.items.slice(0, 8).map(item => '- ' + item.content),
+          '',
+          '【项目】',
+          projectManifest.name,
+          projectManifest.tone,
+        ].join('\n'),
+        history: messages.slice(-10).map(message => ({
+          role: message.sender === 'other' ? 'assistant' as const : 'user' as const,
+          content: message.text || message.transcript || '[邀约卡片]',
+        })),
+        userPrompt: [
+          '用户刚刚接受了这条邀约。',
+          invite ? '地点：' + invite.inviteLocation : '',
+          invite ? '时间：' + invite.inviteTime : '',
+          invite ? '主题：' + invite.inviteTheme : '',
+          '自然回复一条手机聊天消息，让这次见面有真实的期待感。',
+        ].filter(Boolean).join('\n'),
+        temperature: settings.temperature,
+      });
+
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'other',
-        text: '好，那我们一言为定。明晚老地方，我带上热可可等你，不准爽约。',
+        text: reply,
         time: '刚刚',
-        thinking: '【情境感知】她答应赴约了！\n【内心欲念】胸口涌上一股强烈的喜悦与期待，甚至想现在就去准备明天要带的胶片和礼物。\n【台词策略】语气沉稳中带着难以掩饰的笑意。',
         showThinking: false,
-      };
-      setMessages((prev) => [...prev, replyMsg]);
-    }, 1200);
+      }]);
+    } catch {
+      // 邀约状态已经保存；AI 临时失败不影响剧情。
+    }
   };
 
   // 推迟/改期线下邀约
