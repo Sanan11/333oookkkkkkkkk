@@ -137,6 +137,35 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     showNotice('分组已删除，角色已保留');
   };
 
+  const createBlankCharacter = () => {
+    const now = new Date().toISOString();
+    const character: ImportedCharacter = {
+      id: `char-manual-${Date.now()}`,
+      name: '',
+      variantLabel: '',
+      avatar: '',
+      description: '',
+      personality: '',
+      scenario: '',
+      firstMessage: '',
+      exampleDialogue: '',
+      creatorNotes: '',
+      systemPrompt: '',
+      postHistoryInstructions: '',
+      alternateGreetings: [],
+      tags: [],
+      creator: '',
+      characterVersion: '',
+      groupId: selectedGroupId === 'all' ? null : selectedGroupId,
+      sourceFormat: 'manual',
+      importedAt: now,
+    };
+    setCharacters(prev => [character, ...prev]);
+    setSelectedId(character.id);
+    setIsEditing(true);
+    showNotice('已创建空白角色，请填写角色卡内容');
+  };
+
   const handleImport = async (file?: File) => {
     if (!file) return;
     try {
@@ -195,6 +224,13 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={createBlankCharacter}
+            className="w-8 h-8 rounded-full bg-white/55 border border-[rgba(40,36,31,.12)] text-[#655f59] grid place-items-center"
+            title="新建空白角色"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
           {selected && (
             <button
               onClick={() => setIsEditing(prev => !prev)}
@@ -236,8 +272,15 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                 支持 PNG 角色卡、JSON、YAML / YML。导入后会保存在本机；当前项目不会预置任何角色数据。
               </p>
               <button
-                onClick={() => fileRef.current?.click()}
+                onClick={createBlankCharacter}
                 className="mt-5 w-full py-2.5 rounded-xl bg-[#292724] text-white text-xs font-serif tracking-wider flex items-center justify-center gap-2"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                新建空白角色
+              </button>
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="mt-2 w-full py-2.5 rounded-xl bg-white border border-[#ddd6cd] text-[#5f5952] text-xs font-serif tracking-wider flex items-center justify-center gap-2"
               >
                 <FilePlus2 className="w-3.5 h-3.5" />
                 导入我的角色卡
