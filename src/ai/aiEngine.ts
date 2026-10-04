@@ -72,7 +72,7 @@ export function readStoredAiSettings(): AiSettings {
 }
 
 function normalizeForMatch(value: string): string {
-  return value.toLowerCase().replace(/\\s+/g, ' ').trim();
+  return value.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 export function selectWorldBookEntries(worldbooks: WorldBook[], inputText: string) {
@@ -270,7 +270,7 @@ async function parseSseResponse(
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split(/\\r?\\n/);
+    const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() || '';
     lines.forEach(processLine);
   }
@@ -297,7 +297,7 @@ function extractOpenAiText(data: any): string {
 
 async function callGemini(input: AiReplyInput): Promise<string> {
   const { settings } = input;
-  const base = (settings.apiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\\/+$/, '');
+  const base = (settings.apiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
   const action = settings.streaming ? 'streamGenerateContent' : 'generateContent';
   const suffix = settings.streaming ? '&alt=sse' : '';
   const endpoint =
@@ -344,7 +344,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
 function normalizeOpenAiEndpoint(baseUrl: string): string {
   const base = baseUrl.trim().replace(/\\/+$/, '');
   if (!base) throw new Error('AI_BASE_URL_MISSING');
-  return /\\/chat\\/completions$/i.test(base) ? base : base + '/chat/completions';
+  return /\/chat\/completions$/i.test(base) ? base : base + '/chat/completions';
 }
 
 async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
