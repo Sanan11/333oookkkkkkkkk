@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { usePersistentState } from '../../store/usePersistentState';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -36,7 +37,7 @@ export function LineConversationView({
 }: LineConversationViewProps) {
   // Input & Messages
   const [inputText, setInputText] = useState(initialDraft);
-  const [messages, setMessages] = useState<any[]>([
+  const [messages, setMessages] = usePersistentState<any[]>(`line:conversation:${contactName}`, [
     {
       id: 1,
       sender: 'other',
@@ -125,14 +126,14 @@ export function LineConversationView({
   const [enableChainOfThought, setEnableChainOfThought] = useState(true);
 
   // 酒馆作者注释 (Author's Note / A/N)
-  const [authorsNote, setAuthorsNote] = useState('[指导原则: 顾言此刻内心正压抑着对你的占有欲与保护欲，言行表面克制沉稳，眼底却有隐秘的深情。]');
+  const [authorsNote, setAuthorsNote] = usePersistentState(`line:authors-note:${contactName}`, '[指导原则: 顾言此刻内心正压抑着对你的占有欲与保护欲，言行表面克制沉稳，眼底却有隐秘的深情。]');
   const [authorsNoteDepth, setAuthorsNoteDepth] = useState('3');
 
   // 普通聊天软件核心能力 (Standard Mobile Messenger Features)
   const [isTyping, setIsTyping] = useState(false);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMsgIds, setSelectedMsgIds] = useState<number[]>([]);
-  const [favorites, setFavorites] = useState<any[]>([
+  const [favorites, setFavorites] = usePersistentState<any[]>(`line:favorites:${contactName}`, [
     {
       id: 101,
       contactName: contactName || '顾言',
@@ -144,7 +145,7 @@ export function LineConversationView({
   ]);
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
   const [showQuickPhrases, setShowQuickPhrases] = useState(false);
-  const [quickPhrases, setQuickPhrases] = useState([
+  const [quickPhrases, setQuickPhrases] = usePersistentState('line:quick-phrases', [
     '在忙吗？',
     '刚刚忙完回到家~',
     '今天有点累，想听听你的声音',
@@ -161,7 +162,7 @@ export function LineConversationView({
 
   // 我的人设管理器 (User Persona Manager)
   const [showPersonaManager, setShowPersonaManager] = useState(false);
-  const [userPersonas, setUserPersonas] = useState([
+  const [userPersonas, setUserPersonas] = usePersistentState('line:user-personas', [
     {
       id: 'p1',
       name: 'Coral',
