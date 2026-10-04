@@ -323,9 +323,9 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
       )}
 
       {/* ========================================================================= */}
-      {/* PAGE 2: 深度扩展页 (Threads + 查手机) 
+      {/* PAGE 2: 深度扩展页 (Threads + 查手机)
           与第一页风格统一，极简克制，充实而充满叙事张力！
-      {/* ========================================================================= */}
+      */}
       {currentPage === 2 && (
         <div className="animate-in fade-in duration-300">
           
