@@ -10,6 +10,9 @@ import { MusicScreenView } from './screens/MusicScreenView';
 import { NotesScreenView } from './screens/NotesScreenView';
 import { ThreadsScreenView } from './screens/ThreadsScreenView';
 import { SpyPhoneScreenView } from './screens/SpyPhoneScreenView';
+import { WorldBookScreenView } from './screens/WorldBookScreenView';
+import { SettingsScreenView } from './screens/SettingsScreenView';
+import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
 import { LineAppView } from './line/LineAppView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 
@@ -132,6 +135,18 @@ export function PhoneSimulator({
               themeMode={themeMode}
               onNavigate={setCurrentScreen}
             />
+          )}
+
+          {currentScreen === 'world-book' && (
+            <WorldBookScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'settings' && (
+            <SettingsScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'offline-story' && (
+            <OfflineStoryScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'lock' && (
