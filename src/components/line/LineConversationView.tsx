@@ -3,6 +3,7 @@ import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
 import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
+import { getCharacterMemory } from '../../store/characterMemory';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
@@ -197,6 +198,7 @@ export function LineConversationView({
   const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
   const importedCharacter = importedCharacters.find(character => character.name === contactName) || null;
   const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
+  const characterMemory = getCharacterMemory(importedCharacter?.id || contactName, contactName);
 
   // 酒馆角色核心档案
   const [characterProfile, setCharacterProfile] = usePersistentState(
@@ -523,6 +525,7 @@ export function LineConversationView({
         characterProfile,
         persona: activePersona,
         worldbooks,
+        memory: characterMemory,
         messages: [...messages, newMsg],
         userMessage: userText,
         isGroup,
