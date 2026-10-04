@@ -51,7 +51,7 @@ export function startBackgroundRuntime() {
   if (typeof window === 'undefined' || timer !== null) return;
 
   const tick = () => {
-    markUserActivity();
+    persistHeartbeat();
     const settings = readAppSettings();
 
     void runProactiveCatchup();
