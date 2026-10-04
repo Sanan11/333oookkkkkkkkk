@@ -4,12 +4,12 @@ const STORAGE_KEY = 'phone:project-manifest';
 
 export const DEFAULT_PROJECT_MANIFEST: ProjectManifest = {
   id: 'sane333-project',
-  name: 'Sane333',
-  subtitle: 'Private Virtual Phone',
-  description: '一个属于自己的角色、聊天、世界书与线下剧情项目。',
-  genre: '现代乙女 / 日常 / 沉浸式角色互动',
-  language: '中文',
-  tone: '自然、细腻、克制、有生活感；保留角色自己的性格，不替用户行动。',
+  name: '',
+  subtitle: '',
+  description: '',
+  genre: '',
+  language: '',
+  tone: '',
   globalPrompt: '',
   activeCharacterId: null,
   activeWorldBookId: null,
