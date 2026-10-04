@@ -20,6 +20,7 @@ interface LineChatItem {
   name: string;
   characterId?: string;
   variantLabel?: string;
+  chatLabel?: string;
   groupId?: string;
   time: string;
   preview: string;
@@ -1427,7 +1428,36 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
             className="w-full bg-white rounded-t-[20px] p-4 pb-6 space-y-3 animate-in slide-in-from-bottom"
           >
             <div className="w-8 h-1 bg-[#ddd] rounded-full mx-auto" />
-            <div className="font-semibold text-sm text-[#333] px-2">{chatContextMenu.name}</div>
+            <div className="font-semibold text-sm text-[#333] px-2">
+              {chatContextMenu.name}
+              {chatContextMenu.variantLabel && <span className="ml-1 text-[9px] font-normal text-[#aaa]">· {chatContextMenu.variantLabel}</span>}
+              {chatContextMenu.chatLabel && <div className="text-[9px] font-normal text-[#aaa] mt-0.5">{chatContextMenu.chatLabel}</div>}
+            </div>
+            {!chatContextMenu.isGroup && chatContextMenu.characterId && (
+              <button
+                onClick={() => {
+                  const existing = chatItems.filter(item => item.characterId === chatContextMenu.characterId);
+                  const newChat: LineChatItem = {
+                    ...chatContextMenu,
+                    id: `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+                    chatLabel: `聊天 ${existing.length + 1}`,
+                    time: '刚刚',
+                    preview: '新的独立聊天',
+                    unread: 0,
+                    isPinned: false,
+                    isMuted: false,
+                    draft: '',
+                  };
+                  setChatItems(prev => [newChat, ...prev]);
+                  setChatContextMenu(null);
+                  setActiveChatId(newChat.id);
+                  showToast(`已创建 ${chatContextMenu.name} 的新聊天`);
+                }}
+                className="w-full px-2.5 py-2.5 rounded-xl bg-[#faf3f5] text-[#ae7e89] text-xs text-left cursor-pointer"
+              >
+                ＋ 为这个角色新建聊天
+              </button>
+            )}
 
             <div className="divide-y divide-[#f2f2f4] text-xs">
               {/* 置顶切换 */}
