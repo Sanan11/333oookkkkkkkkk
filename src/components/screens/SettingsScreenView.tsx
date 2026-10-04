@@ -516,6 +516,8 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                     {[10, 20, 30, 40, 60].map(value => <option key={value} value={value}>每 {value} 条聊天消息</option>)}
                   </select>
                 </label>
+
+                </>
               )}
             </div>
 
