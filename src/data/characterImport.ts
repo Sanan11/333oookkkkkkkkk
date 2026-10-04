@@ -1,0 +1,207 @@
+export interface ImportedCharacter {
+  id: string;
+  name: string;
+  avatar?: string;
+  description: string;
+  personality: string;
+  scenario: string;
+  firstMessage: string;
+  exampleDialogue: string;
+  creatorNotes: string;
+  systemPrompt: string;
+  postHistoryInstructions: string;
+  alternateGreetings: string[];
+  tags: string[];
+  creator: string;
+  characterVersion: string;
+  sourceFormat: 'json' | 'yaml' | 'png' | 'manual';
+  importedAt: string;
+}
+
+function cleanString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function cleanArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(cleanString).filter(Boolean);
+}
+
+function getCardPayload(raw: any): any {
+  if (raw?.data && typeof raw.data === 'object') return raw.data;
+  if (raw?.character && typeof raw.character === 'object') return raw.character;
+  return raw || {};
+}
+
+function normalizeCharacter(raw: any, sourceFormat: ImportedCharacter['sourceFormat']): ImportedCharacter {
+  const data = getCardPayload(raw);
+  const now = new Date().toISOString();
+  const name = cleanString(data.name) || '未命名角色';
+
+  return {
+    id: cleanString(data.id) || `char-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    avatar: cleanString(data.avatar) || cleanString(data.avatar_url),
+    description: cleanString(data.description) || cleanString(data.desc),
+    personality: cleanString(data.personality),
+    scenario: cleanString(data.scenario),
+    firstMessage: cleanString(data.first_mes) || cleanString(data.firstMessage),
+    exampleDialogue: cleanString(data.mes_example) || cleanString(data.exampleDialogue),
+    creatorNotes: cleanString(data.creator_notes) || cleanString(data.creatorNotes),
+    systemPrompt: cleanString(data.system_prompt) || cleanString(data.systemPrompt),
+    postHistoryInstructions:
+      cleanString(data.post_history_instructions) ||
+      cleanString(data.postHistoryInstructions),
+    alternateGreetings:
+      cleanArray(data.alternate_greetings).length > 0
+        ? cleanArray(data.alternate_greetings)
+        : cleanArray(data.alternateGreetings),
+    tags: cleanArray(data.tags),
+    creator: cleanString(data.creator),
+    characterVersion:
+      cleanString(data.character_version) || cleanString(data.characterVersion),
+    sourceFormat,
+    importedAt: now,
+  };
+}
+
+function readPngTextChunks(buffer: ArrayBuffer): Record<string, string> {
+  const bytes = new Uint8Array(buffer);
+  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.length < 8 || !signature.every((value, i) => bytes[i] === value)) {
+    throw new Error('不是有效的 PNG 文件。');
+  }
+
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  const result: Record<string, string> = {};
+  let offset = 8;
+
+  while (offset + 12 <= bytes.length) {
+    const view = new DataView(buffer);
+    const length = view.getUint32(offset, false);
+    if (length > 50_000_000 || offset + 12 + length > bytes.length) break;
+
+    const type = decoder.decode(bytes.slice(offset + 4, offset + 8));
+    const chunk = bytes.slice(offset + 8, offset + 8 + length);
+
+    if (type === 'tEXt') {
+      const zero = chunk.indexOf(0);
+      if (zero > 0) {
+        const keyword = decoder.decode(chunk.slice(0, zero));
+        const value = decoder.decode(chunk.slice(zero + 1));
+        result[keyword] = value;
+      }
+    }
+
+    // iTXt is used by some card exporters.
+    if (type === 'iTXt') {
+      let cursor = 0;
+      const readNullTerminated = () => {
+        const start = cursor;
+        while (cursor < chunk.length && chunk[cursor] !== 0) cursor += 1;
+        const value = decoder.decode(chunk.slice(start, cursor));
+        cursor += 1;
+        return value;
+      };
+      const keyword = readNullTerminated();
+      if (keyword) {
+        if (cursor + 2 > chunk.length) {
+          offset += length + 12;
+          continue;
+        }
+        const compressionFlag = chunk[cursor];
+        cursor += 1;
+        cursor += 1; // compression method
+        readNullTerminated(); // language tag
+        readNullTerminated(); // translated keyword
+        if (compressionFlag === 0 && cursor <= chunk.length) {
+          result[keyword] = decoder.decode(chunk.slice(cursor));
+        }
+      }
+    }
+
+    offset += length + 12;
+    if (type === 'IEND') break;
+  }
+
+  return result;
+}
+
+export async function parseCharacterFile(file: File): Promise<ImportedCharacter> {
+  const lower = file.name.toLowerCase();
+
+  if (lower.endsWith('.png')) {
+    const chunks = readPngTextChunks(await file.arrayBuffer());
+    const encoded = chunks.chara || chunks.char || chunks.character;
+    if (!encoded) throw new Error('PNG 中没有找到角色卡数据。');
+
+    let jsonText = '';
+    try {
+      jsonText = decodeURIComponent(
+        escape(atob(encoded))
+      );
+    } catch {
+      try {
+        jsonText = new TextDecoder().decode(
+          Uint8Array.from(atob(encoded), c => c.charCodeAt(0))
+        );
+      } catch {
+        jsonText = atob(encoded);
+      }
+    }
+
+    return normalizeCharacter(JSON.parse(jsonText), 'png');
+  }
+
+  const text = await file.text();
+  if (lower.endsWith('.json')) {
+    return normalizeCharacter(JSON.parse(text), 'json');
+  }
+
+  // Lightweight YAML fallback for common Character Card exports.
+  // Full YAML structures can still be pasted as JSON in the importer.
+  if (lower.endsWith('.yaml') || lower.endsWith('.yml')) {
+    const parsed: Record<string, any> = {};
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.replace(/^\s*[-*]\s*/, '').trim();
+      if (!line || line.startsWith('#') || !line.includes(':')) continue;
+      const index = line.indexOf(':');
+      const key = line.slice(0, index).trim().replace(/^['"]|['"]$/g, '');
+      const value = line.slice(index + 1).trim();
+      if (value.startsWith('[') && value.endsWith(']')) {
+        parsed[key] = value
+          .slice(1, -1)
+          .split(',')
+          .map(v => v.trim().replace(/^['"]|['"]$/g, ''))
+          .filter(Boolean);
+      } else {
+        parsed[key] = value.replace(/^['"]|['"]$/g, '');
+      }
+    }
+    return normalizeCharacter(parsed, 'yaml');
+  }
+
+  throw new Error('支持的角色卡格式：PNG / JSON / YAML / YML。');
+}
+
+export function exportCharacterJson(character: ImportedCharacter): string {
+  return JSON.stringify(
+    {
+      name: character.name,
+      description: character.description,
+      personality: character.personality,
+      scenario: character.scenario,
+      first_mes: character.firstMessage,
+      mes_example: character.exampleDialogue,
+      creator_notes: character.creatorNotes,
+      system_prompt: character.systemPrompt,
+      post_history_instructions: character.postHistoryInstructions,
+      alternate_greetings: character.alternateGreetings,
+      tags: character.tags,
+      creator: character.creator,
+      character_version: character.characterVersion,
+    },
+    null,
+    2,
+  );
+}
