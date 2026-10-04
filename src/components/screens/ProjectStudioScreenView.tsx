@@ -336,7 +336,7 @@ export function ProjectStudioScreenView({ onNavigate }: { onNavigate: (screen: S
             <label className="block text-[9px] text-[#7e7770]">项目级 AI 指令
               <textarea value={manifest.globalPrompt} onChange={e => patch({ globalPrompt: e.target.value })} className="w-full mt-1 min-h-[110px] bg-white/70 rounded-xl p-2 text-[10.5px] outline-none resize-y leading-relaxed font-mono" placeholder="写给 AI 的项目总规则。" />
             </label>
-            <button onClick={() => { patch({ id: 'project-' + Date.now() }); notify('项目身份已重新保存'); }} className="w-full py-2 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5">
+            <button onClick={() => { patch({ updatedAt: new Date().toISOString() }); notify('项目已保存'); }} className="w-full py-2 rounded-xl bg-[#292724] text-white text-[10px] flex items-center justify-center gap-1.5">
               <Save className="w-3.5 h-3.5" /> 保存项目
             </button>
           </section>
