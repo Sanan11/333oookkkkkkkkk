@@ -544,55 +544,67 @@ export async function summarizeConversationMemory(
   characterName: string,
   currentMemory: CharacterMemory,
   messages: Array<{ sender: string; text?: string; transcript?: string }>,
-): Promise<{ summary: string; items: string[] }> {
+): Promise<{ summary: string; items: Array<{ content: string; kind: 'fact' | 'diary' | 'relationship' | 'preference' | 'event'; importance: number }> }> {
+  const appSettings = readAppSettings();
+  if (!appSettings.memoryEnabled) return { summary: currentMemory.summary, items: [] };
+
   const conversation = messages
-    .slice(-40)
+    .slice(-Math.max(10, appSettings.memoryContextMessages || 40))
     .map(message => {
       const speaker = message.sender === 'other' ? characterName : message.sender === 'me' ? '用户' : '系统';
       return speaker + ': ' + (message.text || message.transcript || '[媒体消息]');
     })
     .join('\n');
 
+  const mode = appSettings.memoryMode || 'hybrid';
+  const model = appSettings.memoryModel.trim() || settings.model;
+  const memorySettings: AiSettings = { ...settings, model, temperature: appSettings.memoryTemperature };
+  const modeInstruction =
+    mode === 'diary' ? '重点整理成关系日记：记录发生了什么、氛围与值得记住的经历，不虚构用户感受。' :
+    mode === 'facts' ? '重点整理成结构化事实：偏好、承诺、关系变化、持续事件、稳定人物信息，每条尽量一句话。' :
+    mode === 'relationship' ? '重点整理关系状态：关键事件、关系变化、未完成约定。' :
+    '混合提取稳定事实、关系变化、重要事件和少量值得保留的互动日记。';
+
   const systemPrompt = [
-    '你是 Sane333 的长期记忆整理器。',
-    '请从最近的角色扮演聊天中提取值得长期保留的事实。',
-    '只保留稳定、可复用的信息：关系变化、重要经历、承诺、偏好、人物设定变化、正在持续的事件。',
-    '不要记录一次性的闲聊，不要把猜测当事实，不要替用户臆造经历。',
+    '你是 Sane333 的长期记忆引擎，不是聊天角色。',
+    '把聊天记录压缩成以后仍然有用的长期上下文。',
+    modeInstruction,
+    '只记录聊天中有证据支持的内容；禁止猜测、脑补或替用户决定感受。',
+    '与已有记忆重复的内容要合并或跳过。',
     '输出严格 JSON，不要 Markdown。',
-    '格式：',
-    JSON.stringify({
-      summary: '一段 80-220 字的长期摘要',
-      items: ['事实 1', '事实 2', '事实 3'],
-    }),
+    JSON.stringify({ summary: '80-220 字长期摘要', items: [{ content: '一条长期记忆', kind: 'fact', importance: 80 }] }),
   ].join('\n');
 
   const userPrompt = [
     '【角色】' + characterName,
-    '【已有长期记忆摘要】',
-    currentMemory.summary || '暂无',
+    '【模式】' + mode,
+    '【已有长期摘要】' + (currentMemory.summary || '暂无'),
     '【已有重要记忆】',
-    currentMemory.items.slice(0, 15).map(item => '- ' + item.content).join('\n') || '暂无',
+    currentMemory.items.slice(0, 25).map(item => '- [' + (item.kind || 'fact') + '] ' + item.content).join('\n') || '暂无',
     '',
     '【最近聊天】',
     conversation || '暂无',
     '',
-    '请合并旧记忆与新聊天，去重后输出最多 12 条最值得长期保存的新事实。',
+    '去重、合并、压缩，最多输出 12 条新记忆；重要度 0-100。',
   ].join('\n');
 
   const raw = await generateCreativeText({
-    settings,
+    settings: memorySettings,
     systemPrompt,
     userPrompt,
-    temperature: 0.2,
+    temperature: appSettings.memoryTemperature,
   });
-
-  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const cleaned = raw.trim().replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/i, '');
   const parsed = JSON.parse(cleaned);
 
   return {
     summary: typeof parsed?.summary === 'string' ? parsed.summary.trim() : currentMemory.summary,
     items: Array.isArray(parsed?.items)
-      ? parsed.items.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0).map((item: string) => item.trim()).slice(0, 12)
+      ? parsed.items.filter((item: any) => item && typeof item.content === 'string' && item.content.trim()).map((item: any) => ({
+          content: item.content.trim(),
+          kind: ['fact','diary','relationship','preference','event'].includes(item.kind) ? item.kind : (mode === 'diary' ? 'diary' : mode === 'relationship' ? 'relationship' : 'fact'),
+          importance: Math.max(0, Math.min(100, Number(item.importance) || 50)),
+        })).slice(0, 12)
       : [],
   };
 }
