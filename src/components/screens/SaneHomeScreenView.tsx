@@ -420,7 +420,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
           </div>
 
           {/* Page 2 Apps: The Requested 2 Apps (Threads + 查手机) */}
-          <section className="absolute z-10 left-[26px] right-[20px] top-[565px] flex gap-[24px]">
+          <section className="absolute z-10 left-[18px] right-[16px] top-[565px] flex gap-[10px]">
             
             {/* App 1: Threads */}
             <button 
@@ -450,7 +450,18 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <span className="font-semibold tracking-tight text-[var(--ink)]">NPC</span>
             </button>
 
-            {/* App 3: 查手机 */}
+            {/* App 3: 预设 */}
+            <button
+              onClick={() => onNavigate('group-presets')}
+              className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
+            >
+              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#f0ebe5] text-[#63584f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+                <span className="text-[18px] font-serif">预</span>
+              </div>
+              <span className="font-semibold tracking-tight text-[var(--ink)]">预设</span>
+            </button>
+
+            {/* App 4: 查手机 */}
             <button 
               onClick={() => onNavigate('spy-phone')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
@@ -485,7 +496,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
           className={`h-1.5 rounded-full transition-all ${
             currentPage === 2 ? 'w-5 bg-[var(--ink,#242323)]' : 'w-1.5 bg-[#8b8782]/40 hover:bg-[#8b8782]'
           }`}
-          title="切换至第 2 页 (Threads & 查手机)"
+          title="切换至第 2 页 (Threads · NPC · 预设 · 查手机)"
         />
       </div>
 
