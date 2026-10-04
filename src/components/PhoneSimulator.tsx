@@ -16,6 +16,7 @@ import { ProjectStudioScreenView } from './screens/ProjectStudioScreenView';
 import { OfflineStoryScreenView } from './screens/OfflineStoryScreenView';
 import { CalendarScreenView } from './screens/CalendarScreenView';
 import { NpcScreenView } from './screens/NpcScreenView';
+import { GroupPresetScreenView } from './screens/GroupPresetScreenView';
 import { LineAppView } from './line/LineAppView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
 
@@ -162,6 +163,10 @@ export function PhoneSimulator({
 
           {currentScreen === 'npc' && (
             <NpcScreenView onNavigate={setCurrentScreen} />
+          )}
+
+          {currentScreen === 'group-presets' && (
+            <GroupPresetScreenView onNavigate={setCurrentScreen} />
           )}
 
           {currentScreen === 'lock' && (
