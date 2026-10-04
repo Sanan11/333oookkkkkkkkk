@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Brain, Clock3, Heart, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Brain, Clock3, Heart, Plus, Trash2, BookOpen, Sparkles, Link2, Tag } from 'lucide-react';
 import type { ScreenType } from '../../types';
 import type { ImportedCharacter } from '../../data/characterImport';
 import { addCharacterMemoryItem, deleteCharacterMemoryItem, getCharacterMemory, saveCharacterMemory, type CharacterMemory } from '../../store/characterMemory';
@@ -29,7 +29,18 @@ export function MemoryScreenView({ onNavigate }: { onNavigate: (screen: ScreenTy
     return () => { window.removeEventListener('sane333:memory-changed', refresh); window.removeEventListener('sane333:world-event', refresh); };
   }, [selected?.id, selected?.name]);
 
-  const items = useMemo(() => [...memory.items].sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)), [memory.items]);
+  const [filter, setFilter] = useState<'all' | 'fact' | 'diary' | 'relationship' | 'preference' | 'event'>('all');
+  const items = useMemo(() => [...memory.items]
+    .filter(item => filter === 'all' || (item.kind || 'fact') === filter)
+    .sort((a,b) => b.importance - a.importance || b.updatedAt.localeCompare(a.updatedAt)), [memory.items, filter]);
+
+  const kindMeta = {
+    fact: { label:'事实', icon:Tag },
+    diary: { label:'日记', icon:BookOpen },
+    relationship: { label:'关系', icon:Heart },
+    preference: { label:'偏好', icon:Sparkles },
+    event: { label:'事件', icon:Link2 },
+  } as const;
 
   const notifyMemory = (next: CharacterMemory) => {
     setMemory(next);
@@ -85,8 +96,15 @@ export function MemoryScreenView({ onNavigate }: { onNavigate: (screen: ScreenTy
             </section>
             <section className="rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)] p-4">
               <div className="flex items-center justify-between mb-3"><div><div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">MEMORY ENTRIES</div><div className="mt-1 font-serif text-sm">{items.length} 条长期记忆</div></div><button onClick={addMemory} className="px-2.5 py-1.5 rounded-full bg-[#292724] text-white text-[9px]">＋ 记一件事</button></div>
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2">
+                {([['all','全部'],['fact','事实'],['diary','日记'],['relationship','关系'],['preference','偏好'],['event','事件']] as const).map(([key,label]) =>
+                  <button key={key} onClick={() => setFilter(key)} className={`shrink-0 px-2.5 py-1 rounded-full text-[8px] border ${filter===key?'bg-[#292724] text-white border-[#292724]':'bg-white/55 text-[#777069] border-[rgba(40,36,31,.1)]'}`}>{label}</button>
+                )}
+              </div>
               {items.length===0 ? <div className="py-8 text-center text-[10px] text-[#8b8782] font-serif-sc">还没有单独记录的记忆。</div> :
-                <div className="space-y-2">{items.map(item=><article key={item.id} className="rounded-xl bg-[#f7f4ee] border border-[rgba(40,36,31,.08)] p-3"><div className="flex gap-3"><div className="mt-0.5 text-[#8b7560]"><Clock3 className="w-3.5 h-3.5"/></div><div className="flex-1 min-w-0"><p className="text-[10.5px] leading-relaxed text-[#443f3a] whitespace-pre-wrap font-serif-sc">{item.content}</p><div className="mt-2 text-[7px] font-mono text-[#9a938b]">{item.source.toUpperCase()} · IMPORTANCE {item.importance}</div></div><button onClick={()=>removeMemory(item.id)} className="self-start text-[#a46b64]" title="删除记忆"><Trash2 className="w-3.5 h-3.5"/></button></div></article>)}</div>}
+                <div className="space-y-2">{items.map(item=><article key={item.id} className="rounded-xl bg-[#f7f4ee] border border-[rgba(40,36,31,.08)] p-3"><div className="flex gap-3"><div className="mt-0.5 text-[#8b7560]"><Clock3 className="w-3.5 h-3.5"/></div><div className="flex-1 min-w-0"><p className="text-[10.5px] leading-relaxed text-[#443f3a] whitespace-pre-wrap font-serif-sc">{item.content}</p><div className="mt-2 flex items-center gap-2 text-[7px] font-mono text-[#9a938b]">
+  <span>{item.source.toUpperCase()}</span><span>·</span><span>{(item.kind || 'fact').toUpperCase()}</span><span>·</span><span>IMPORTANCE {item.importance}</span>
+</div></div><button onClick={()=>removeMemory(item.id)} className="self-start text-[#a46b64]" title="删除记忆"><Trash2 className="w-3.5 h-3.5"/></button></div></article>)}</div>}
             </section>
           </>}
         </>}
