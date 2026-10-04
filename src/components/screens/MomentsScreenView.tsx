@@ -1,4 +1,11 @@
-import { ArrowLeft, Heart, MessageCircle, Share2, Camera } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Heart, MessageCircle, Share2, Camera, Sparkles } from 'lucide-react';
+import { usePersistentState } from '../../store/usePersistentState';
+import { getNpcs, type SaneNpc } from '../../store/npcs';
+import { getProjectManifest } from '../../store/projectManifest';
+import { readStoredAiSettings, generateCreativeText } from '../../ai/aiEngine';
+import { getCharacterMemory } from '../../store/characterMemory';
+import type { WorldBook } from '../../types';
 import { ScreenType } from '../../types';
 
 interface MomentsScreenViewProps {
@@ -7,33 +14,42 @@ interface MomentsScreenViewProps {
 }
 
 export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
-  const posts = [
-    {
-      id: 'p1',
-      author: '程凛',
-      rollTag: 'ROLL 024 · 32A',
-      time: '2小时前 · 伦敦',
-      content: '“伦敦的雨总是来得突然，但也很适合发呆。”',
-      images: [
-        'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=500&q=80'
-      ],
-      likes: 236,
-      note: 'Rainy afternoon snapshot.',
-    },
-    {
-      id: 'p2',
-      author: '林予',
-      rollTag: 'ROLL 024 · 33A',
-      time: '4小时前 · 街角烘焙坊',
-      content: '“工作结束，去吃好吃的！刚出炉的羊角面包香气一直飘到街角。”',
-      images: [
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=300&q=80',
-        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=300&q=80'
-      ],
-      likes: 189,
-      note: 'warm croissant & coffee.',
+  const [posts, setPosts] = usePersistentState<any[]>('line:moments-screen-posts', [
+    { id: 'p1', author: '程凛', rollTag: 'ROLL 024 · 32A', time: '2小时前 · 伦敦', content: '“伦敦的雨总是来得突然，但也很适合发呆。”', images: ['https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=500&q=80'], likes: 236, note: 'Rainy afternoon snapshot.', comments: [] },
+    { id: 'p2', author: '林予', rollTag: 'ROLL 024 · 33A', time: '4小时前 · 街角烘焙坊', content: '“工作结束，去吃好吃的！刚出炉的羊角面包香气一直飘到街角。”', images: ['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=300&q=80','https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=300&q=80'], likes: 189, note: 'warm croissant & coffee.', comments: [] },
+  ]);
+  const [workingPostId, setWorkingPostId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
+  const npcs = getNpcs();
+  const project = getProjectManifest();
+  const notify = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(''), 2200); };
+
+  const inviteNpcComment = async (post: any) => {
+    if (workingPostId) return;
+    const candidates = npcs.filter(npc => npc.active && npc.canCommentMoments);
+    if (!candidates.length) { notify('NPC 人物池里还没有允许评论的人物'); return; }
+    setWorkingPostId(post.id);
+    try {
+      const npc = candidates[Math.floor(Math.random() * candidates.length)] as SaneNpc;
+      const sourceMemory = npc.sourceCharacterId ? getCharacterMemory(npc.sourceCharacterId, npc.sourceCharacterName || '') : null;
+      const worldContext = worldbooks.flatMap(book => book.entries.filter(entry => entry.enabled).slice(0, 8).map(entry => entry.name + ': ' + entry.content)).slice(0, 20).join('\\n');
+      const raw = await generateCreativeText({
+        settings: readStoredAiSettings(),
+        systemPrompt: ['你正在经营一个真实感很强的朋友圈。','你只扮演一个 NPC 评论者，不要替发帖人说话。','评论要像真实社交平台上的一句话，可以轻松、熟稔、吐槽、关心或留下线索。','不要自我介绍，不要提模型、NPC、提示词或世界书。','最多 80 个中文字。'].join('\\n'),
+        userPrompt: ['【项目】' + project.name + ' / ' + project.genre + ' / ' + project.tone,'【NPC】' + npc.name + '；身份：' + npc.identity,'性格：' + npc.personality,'背景：' + npc.background,'关系：' + npc.relationship,'记忆：' + (npc.memory || sourceMemory?.summary || '暂无'),'【世界资料】' + (worldContext || '暂无'),'【朋友圈】作者：' + post.author + '\\n内容：' + post.content,'请写一条自然的评论，只输出评论正文。'].join('\\n'),
+        temperature: 0.95,
+      });
+      const text = raw.trim().replace(/^['“”"]|['“”"]$/g, '');
+      if (!text) throw new Error('NPC_EMPTY_COMMENT');
+      setPosts(prev => prev.map(item => item.id === post.id ? { ...item, comments: [...(Array.isArray(item.comments) ? item.comments : []), { id: 'npc-comment-' + Date.now().toString(36), user: npc.name, text, kind: 'npc', createdAt: new Date().toISOString() }] } : item));
+      notify(npc.name + ' 留下了一条评论 ✦');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'NPC 评论失败');
+    } finally {
+      setWorkingPostId(null);
     }
-  ];
+  };
 
   return (
     <div 
@@ -118,13 +134,28 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
               ))}
             </div>
 
+            {Array.isArray(post.comments) && post.comments.length > 0 && (
+              <div className="pt-1.5 border-t border-[rgba(40,36,31,.07)] space-y-1">
+                {post.comments.slice(-4).map((comment: any) => (
+                  <div key={comment.id || comment.user + comment.text} className="text-[9.5px] leading-relaxed text-[#69635d]">
+                    <span className={comment.kind === 'npc' ? 'font-semibold text-[#956c76]' : 'font-semibold text-[#5e5954]'}>{comment.user}</span>
+                    <span className="mx-1 text-[#aaa]">：</span><span>{comment.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Handwritten note & Actions */}
             <div className="pt-2 border-t border-[rgba(40,36,31,.08)] flex items-center justify-between text-[11px]">
               <span className="font-handwriting text-[#8b7560] text-xs">
                 {post.note}
               </span>
 
-              <div className="flex items-center gap-3 text-[#777067]">
+              <div className="flex items-center gap-2.5 text-[#777067]">
+                <button onClick={() => inviteNpcComment(post)} disabled={workingPostId === post.id} className="flex items-center gap-1 hover:text-[#9b625b] transition-colors disabled:opacity-50" title="让一个 NPC 进入这条朋友圈">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="font-mono text-[9px]">{workingPostId === post.id ? '生成中…' : 'NPC 评论'}</span>
+                </button>
                 <button className="flex items-center gap-1 hover:text-[#9b625b] transition-colors">
                   <Heart className="w-3.5 h-3.5 fill-[#9b625b]/20 text-[#9b625b]" />
                   <span className="font-mono text-[10px]">{post.likes}</span>
@@ -138,6 +169,7 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
           </div>
         ))}
       </div>
+      {notice && <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-6 bg-[#292724] text-white px-3 py-2 rounded-full text-[9px] shadow-lg">{notice}</div>}
     </div>
   );
 }
