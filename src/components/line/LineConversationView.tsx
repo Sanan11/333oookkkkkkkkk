@@ -433,7 +433,7 @@ export function LineConversationView({
       '新消息';
 
     onConversationActivity({
-      preview: String(preview).replace(/\\s+/g, ' ').slice(0, 80),
+      preview: String(preview).replace(/\s+/g, ' ').slice(0, 80),
       time: latest.time || '刚刚',
     });
   }, [messages]);
