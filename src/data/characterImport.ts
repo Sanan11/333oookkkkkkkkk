@@ -15,6 +15,7 @@ export interface ImportedCharacter {
   tags: string[];
   creator: string;
   characterVersion: string;
+  groupId?: string | null;
   sourceFormat: 'json' | 'yaml' | 'png' | 'manual';
   importedAt: string;
 }
@@ -61,6 +62,7 @@ function normalizeCharacter(raw: any, sourceFormat: ImportedCharacter['sourceFor
     creator: cleanString(data.creator),
     characterVersion:
       cleanString(data.character_version) || cleanString(data.characterVersion),
+    groupId: cleanString(data.groupId) || cleanString(data.group_id) || null,
     sourceFormat,
     importedAt: now,
   };
@@ -197,6 +199,7 @@ export function exportCharacterJson(character: ImportedCharacter): string {
       tags: character.tags,
       creator: character.creator,
       character_version: character.characterVersion,
+      groupId: character.groupId || null,
     },
     null,
     2,
