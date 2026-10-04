@@ -338,7 +338,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
     const activeItem = chatItems.find((c) => c.id === activeChatId);
     const activeChatName = activeItem?.name || activeChatId;
     const activeCharacterId = activeItem?.characterId || undefined;
-    const conversationId = activeItem?.isGroup ? activeItem.id : activeCharacterId || activeItem?.name || activeChatId;
+    const conversationId = activeItem?.id || activeCharacterId || activeItem?.name || activeChatId;
     return (
       <div className="w-full h-full pt-[30px] bg-white">
         <LineConversationView
