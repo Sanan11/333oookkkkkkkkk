@@ -150,7 +150,17 @@ export async function parseCharacterFile(file: File): Promise<ImportedCharacter>
       }
     }
 
-    return normalizeCharacter(JSON.parse(jsonText), 'png');
+    const parsed = normalizeCharacter(JSON.parse(jsonText), 'png');
+    if (!parsed.avatar) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      parsed.avatar = `data:${file.type || 'image/png'};base64,${btoa(binary)}`;
+    }
+    return parsed;
   }
 
   const text = await file.text();
