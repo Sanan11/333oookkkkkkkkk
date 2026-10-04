@@ -550,7 +550,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
               .map((friend, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setActiveChatName(friend.name)}
+                  onClick={() => setActiveChatId(friend.characterId || friend.name)}
                   className="h-[67px] px-5 flex items-center cursor-pointer hover:bg-[#fafafa] active:bg-[#f5f5f5] transition-colors"
                 >
                   <div className="w-[49px] h-[49px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
