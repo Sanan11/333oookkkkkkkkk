@@ -248,7 +248,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
 
   const testVoice = async () => {
     try {
-      const media = await generateSpeech('Sane333 语音连接测试。', settings);
+      const media = await generateSpeech('私人设备语音连接测试。', settings);
       if (media?.url) {
         const audio = new Audio(media.url);
         await audio.play();
