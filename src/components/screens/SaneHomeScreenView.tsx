@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ScreenType } from '../../types';
+import { getWorldRuntime, getWorldUnreadCount } from '../../store/worldRuntime';
 
 interface SaneHomeScreenViewProps {
   onNavigate: (screen: ScreenType) => void;
@@ -18,6 +19,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
   const [currentDateNumber, setCurrentDateNumber] = useState('02');
   const [currentMonthString, setCurrentMonthString] = useState('OCTOBER · FRIDAY · 2026');
   const [archiveCap, setArchiveCap] = useState('PRIVATE ARCHIVE');
+  const [worldUnread, setWorldUnread] = useState(0);
 
   useEffect(() => {
     const updateTime = () => {
