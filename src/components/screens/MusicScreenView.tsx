@@ -214,6 +214,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
     }
     const character = characters[Math.floor(Math.random() * characters.length)];
     const session: MusicStrangerSession = {
+      mode: 'stranger',
       id: 'music-stranger-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
       characterId: character.id,
       characterName: character.name,
