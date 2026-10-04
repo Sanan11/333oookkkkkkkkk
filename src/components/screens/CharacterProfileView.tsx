@@ -277,7 +277,8 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                       : 'bg-white/55 text-[#655f59] border-[rgba(40,36,31,.14)]'
                   }`}
                 >
-                  {character.name}
+                  <span>{character.name}</span>
+                  <span className="text-[8px] opacity-65">· {character.variantLabel || character.characterVersion || '默认版本'}</span>
                 </button>
               ))}
               <button
@@ -310,7 +311,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                         SOURCE · {selected.sourceFormat.toUpperCase()} · {selected.creator || 'UNKNOWN CREATOR'}
                       </div>
                       <div className="text-[10px] text-[#55504a] font-mono pt-1">
-                        VERSION · {selected.characterVersion || 'unspecified'}
+                        VERSION · {selected.variantLabel || selected.characterVersion || 'unspecified'}
                       </div>
                     </div>
                   </div>
@@ -352,6 +353,16 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                           />
                         </label>
                       ))}
+                      <label className="block">
+                        <span className="text-[8px] font-mono text-[#8b8782]">VERSION LABEL</span>
+                        <input
+                          value={selected.variantLabel}
+                          onChange={e => patchSelected({ variantLabel: e.target.value })}
+                          placeholder="高中生 / 研究生 / 成年人"
+                          className="w-full mt-1 bg-white/65 border border-[rgba(40,36,31,.1)] rounded-xl px-2.5 py-2 outline-none"
+                        />
+                      </label>
+
                       <label className="block">
                         <span className="text-[8px] font-mono text-[#8b8782]">GROUP</span>
                         <select
