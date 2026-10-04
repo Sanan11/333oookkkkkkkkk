@@ -8,6 +8,7 @@ import {
   parseCharacterFile,
 } from '../../data/characterImport';
 import type { CharacterMemory } from '../../store/characterMemory';
+import { getWorldRuntime } from '../../store/worldRuntime';
 import {
   addCharacterMemoryItem,
   deleteCharacterMemoryItem,
@@ -40,6 +41,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     null,
   );
   const [notice, setNotice] = useState('');
+  const [runtimeTick, setRuntimeTick] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const visibleCharacters = selectedGroupId === 'all'
     ? characters
@@ -48,6 +50,17 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     || visibleCharacters[0]
     || characters[0]
     || null;
+  const runtimeState = selected ? getWorldRuntime().characters[selected.id] : null;
+
+  useEffect(() => {
+    const refresh = () => setRuntimeTick(value => value + 1);
+    window.addEventListener('sane333:world-state-changed', refresh);
+    window.addEventListener('sane333:world-event', refresh);
+    return () => {
+      window.removeEventListener('sane333:world-state-changed', refresh);
+      window.removeEventListener('sane333:world-event', refresh);
+    };
+  }, []);
   const [memory, setMemory] = useState<CharacterMemory>(
     () => selected ? getCharacterMemory(selected.id, selected.name) : {
       characterId: 'none',
