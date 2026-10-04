@@ -214,6 +214,13 @@ export function PhoneSimulator({
           )}
         </div>
 
+        {currentScreen === 'home' && (
+          <button onClick={() => setCurrentScreen('project-studio')} className="absolute z-30 left-[24px] bottom-[126px] w-[58px] h-[58px] rounded-[19px] bg-[#292724] text-white shadow-[0_8px_24px_rgba(40,35,30,.18)] grid place-items-center active:scale-95 transition-transform" title="Studio">
+            <div className="text-[16px] font-semibold tracking-[-.5px]">S</div>
+            <div className="absolute -bottom-4 text-[8px] font-medium tracking-[.4px] text-[var(--sub,#68625b)]">Studio</div>
+          </button>
+        )}
+
         {/* Home Indicator Bar (Exact from user template) */}
         <div 
           onClick={() => setCurrentScreen('home')}
