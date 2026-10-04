@@ -137,7 +137,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     showNotice('分组已删除，角色已保留');
   };
 
-  const handleImport = async (file?: File) =>
+  const handleImport = async (file?: File) => {
     if (!file) return;
     try {
       const parsed = await parseCharacterFile(file);
