@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
+import { getCharacterProfile } from '../../data/characterProfiles';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -226,14 +227,10 @@ export function LineConversationView({
 }`);
 
   // 酒馆角色核心档案
-  const [characterProfile, setCharacterProfile] = usePersistentState(`line:character-profile:${contactName}`, {
-    nickname: contactName || '顾言',
-    birthday: '11月22日 (天蝎座)',
-    relationship: '暗恋未满 · 彼此在意的挚友',
-    canAutoChangeRelation: true,
-    callMe: '小笨蛋',
-    selectedLorebook: '《东京雨夜日常·核心世界书》',
-  });
+  const [characterProfile, setCharacterProfile] = usePersistentState(
+    `line:character-profile:${contactName}`,
+    getCharacterProfile(contactName),
+  );
 
   // 酒馆世界书条目库 (Lorebook Entries)
   const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${contactName}`, [
