@@ -17,7 +17,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
   const [currentGreeting, setCurrentGreeting] = useState('GOOD EVENING · PRIVATE DEVICE');
   const [currentDateNumber, setCurrentDateNumber] = useState('02');
   const [currentMonthString, setCurrentMonthString] = useState('OCTOBER · FRIDAY · 2026');
-  const [archiveCap, setArchiveCap] = useState('ARCHIVE 02/10');
+  const [archiveCap, setArchiveCap] = useState('PRIVATE ARCHIVE');
 
   useEffect(() => {
     const updateTime = () => {
@@ -96,7 +96,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               {currentPage === 1 ? currentGreeting : 'VAULT ARCHIVES · PAGE 02'}
             </div>
             <div className="text-[17px] font-[650] tracking-[0.2px] text-[var(--ink)]">
-              {currentPage === 1 ? 'Sane333' : 'Inner Vault'}
+              {currentPage === 1 ? 'Private Phone' : 'Inner Vault'}
             </div>
           </div>
         </div>
