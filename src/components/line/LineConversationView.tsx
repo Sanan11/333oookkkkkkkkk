@@ -11,6 +11,7 @@ import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
+import { getLineGroupByName } from '../../store/lineGroups';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -21,6 +22,16 @@ import {
   CheckSquare, Square, Pin, PinOff, Bell, BellOff, Bookmark, BookmarkCheck,
   FileDown, MessageCircle, Heart
 } from 'lucide-react';
+
+function currentUserNameFallback(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = window.localStorage.getItem('line:current-user');
+    return raw ? JSON.parse(raw)?.name || '' : '';
+  } catch {
+    return '';
+  }
+}
 
 function hasImportedCharacterInStorage(name: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -214,6 +225,10 @@ export function LineConversationView({
   // 导入角色卡与全局世界书：真正 AI 回复从这里读取角色核心资料。
   const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
   const importedCharacter = importedCharacters.find(character => character.name === contactName) || null;
+  const activeGroup = isGroup ? getLineGroupByName(contactName) : null;
+  const groupAiMembers = activeGroup?.members
+    .map(member => ({ member, character: importedCharacters.find(character => character.id === member.characterId || character.name === member.name) || null }))
+    .filter(item => item.character && item.member.name !== currentUserNameFallback()) || [];
   const [worldbooks] = usePersistentState<WorldBook[]>('phone:worldbooks', []);
   const characterMemory = getCharacterMemory(importedCharacter?.id || contactName, contactName);
   const projectManifest = getProjectManifest();
@@ -663,6 +678,48 @@ export function LineConversationView({
       );
     }, 1200);
 
+    if (isGroup) {
+      if (groupAiMembers.length === 0) {
+        showToast('这个群还没有导入可接入 AI 的角色卡');
+        return;
+      }
+      const mentioned = groupAiMembers.filter(({ member }) => userText.includes('@' + member.name) || userText.includes('@' + (member.nickname || '')));
+      const pool = mentioned.length ? mentioned : groupAiMembers;
+      const responders = pool.slice(0, mentioned.length ? 1 : Math.min(pool.length, userText.length > 18 ? 2 : 1));
+      let workingMessages: any[] = [...messages, newMsg];
+      for (let index = 0; index < responders.length; index += 1) {
+        const { character } = responders[index];
+        if (!character) continue;
+        const memberProfile = getCharacterProfile(character.name);
+        const memberMemory = getCharacterMemory(character.id, character.name);
+        const replyMsgId = Date.now() + index + 1;
+        setMessages(prev => [...prev, { id: replyMsgId, sender: 'other', senderName: character.name, text: '', time: '刚刚', type: 'ai-reply', showThinking: false }]);
+        let streamedText = '';
+        const result = await generateCharacterReply({
+          settings: readStoredAiSettings(character.id, character.name),
+          character,
+          characterProfile: memberProfile,
+          persona: activePersona,
+          worldbooks,
+          memory: memberMemory,
+          project: projectManifest,
+          messages: workingMessages,
+          userMessage: userText,
+          isGroup: true,
+          authorNote: authorsNote,
+          stylePreset: activeCotPreset?.title || selectedPreset,
+          temperature: Number(presetTemp) || 0.85,
+          onDelta: delta => {
+            streamedText += delta;
+            setMessages(prev => prev.map(m => m.id === replyMsgId ? { ...m, text: streamedText, senderName: character.name } : m));
+          },
+        });
+        setMessages(prev => prev.map(m => m.id === replyMsgId ? { ...m, text: result.text, senderName: character.name, aiModel: result.model, matchedWorldbookEntries: result.matchedWorldbookEntries } : m));
+        workingMessages = [...workingMessages, { id: replyMsgId, sender: 'other', senderName: character.name, text: result.text }];
+      }
+      return;
+    }
+
     const replyMsgId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
@@ -996,7 +1053,7 @@ export function LineConversationView({
       )
     );
     setContextMenuMsg(null);
-    showToast(`${characterProfile.nickname} 撤回了一条消息`);
+    showToast(`${contextMenuMsg?.senderName || characterProfile.nickname} 撤回了一条消息`);
 
     if (isRoleplayEvent) {
       setTimeout(() => {
@@ -1726,7 +1783,7 @@ export function LineConversationView({
                 <div
                   onClick={() => {
                     if (isGroup) {
-                      setInputText((prev) => `${prev}@${characterProfile.nickname} `);
+                      setInputText((prev) => `${prev}@${msg.senderName || characterProfile.nickname} `);
                     } else {
                       setShowRenderedStatusBarModal(true);
                     }
@@ -1738,10 +1795,10 @@ export function LineConversationView({
                   className={`w-[31px] h-[31px] rounded-full bg-[#f2f2f3] flex items-center justify-center overflow-hidden shrink-0 self-start mt-0.5 cursor-pointer hover:opacity-80 active:scale-95 transition-all ${
                     nudgeAvatar ? 'scale-110 ring-2 ring-[#d4aab5]' : ''
                   }`}
-                  title={isGroup ? '单击@TA，双击拍一拍' : '单击查看状态栏与个人主页，双击拍一拍'}
+                  title={isGroup ? `单击@${msg.senderName || characterProfile.nickname}，双击拍一拍` : '单击查看状态栏与个人主页，双击拍一拍'}
                 >
-                  {importedCharacter?.avatar ? (
-                    <img src={importedCharacter.avatar} alt={characterProfile.nickname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  {(isGroup ? importedCharacters.find(character => character.name === msg.senderName)?.avatar : importedCharacter?.avatar) ? (
+                    <img src={(isGroup ? importedCharacters.find(character => character.name === msg.senderName)?.avatar : importedCharacter?.avatar) || ''} alt={msg.senderName || characterProfile.nickname} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <svg className="w-5 h-5 text-[#999]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <circle cx="12" cy="8" r="4" />
@@ -2080,6 +2137,10 @@ export function LineConversationView({
                       </div>
                     )}
                   </div>
+                )}
+
+                {isGroup && !isMe && msg.senderName && (
+                  <div className="text-[9px] text-[#9a777f] px-1 mb-0.5 font-medium">{msg.senderName}</div>
                 )}
 
                 {/* 3. 酒馆分支重抽滑动选择器 & 更多操作 (长按/点击展开) */}
@@ -4178,7 +4239,7 @@ export function LineConversationView({
                   className="py-3 flex items-center gap-3 cursor-pointer hover:bg-neutral-50 px-2 text-[#ae7e89]"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>令TA撤回此消息 (手滑撤回剧情)</span>
+                  <span>令TA撤回此消息 (剧情撤回)</span>
                 </div>
               )}
 
