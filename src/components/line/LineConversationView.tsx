@@ -4750,18 +4750,48 @@ export function LineConversationView({
                       key={mode.id}
                       onClick={() => {
                         if (mode.id === 'ai-prompt') {
-                          showToast('AI 正在评估当前聊天好感度与世界书氛围……');
-                          setTimeout(() => {
-                            setOfflineInviteData({
-                              location: '旧街角·黑胶唱片咖啡馆 2号临窗位',
-                              time: '今晚 20:30',
-                              theme: '晚风与特调咖啡之约',
-                              letter: '“刚才你说有些累……要不要出来吹吹晚风？有些话，在屏幕前总觉得隔了一层。” 顾言认真写下了邀约。',
-                              inviteFrom: 'other',
-                            });
-                            showToast('已根据当前聊天气氛生成角色邀约！');
-                          }, 900);
-                        } else {
+                          showToast('AI 正在根据当前聊天与角色资料生成邀约……');
+                          void (async () => {
+                            try {
+                              if (!importedCharacter) {
+                                showToast('当前聊天没有绑定角色，无法生成角色邀约');
+                                return;
+                              }
+                              const inviteResult = await generateCreativeText({
+                                settings: readStoredAiSettings(importedCharacter.id, importedCharacter.name),
+                                systemPrompt: [
+                                  '你正在为当前角色设计一张线下见面邀约卡。',
+                                  '只能扮演当前角色，不要替用户行动或说话。',
+                                  '必须根据角色卡、长期记忆、当前聊天记录与世界书生成自然的真实邀约。',
+                                  '不要使用固定地点、固定时间、固定句子，不要提 AI、模型或提示词。',
+                                  '严格输出 JSON。',
+                                ].join('\n'),
+                                userPrompt: [
+                                  '【角色】' + importedCharacter.name,
+                                  '【角色描述】' + importedCharacter.description,
+                                  '【性格】' + importedCharacter.personality,
+                                  '【情境】' + characterProfile.relationship + ' / ' + (characterProfile.bio || ''),
+                                  '【长期记忆】' + (characterMemory.summary || '暂无'),
+                                  '【世界书】' + (worldbooks.flatMap(book => book.enabled ? book.entries.filter(entry => entry.enabled).map(entry => entry.name + ': ' + entry.content) : []).join('\n') || '暂无'),
+                                  '【最近聊天】' + messages.slice(-12).map(message => (message.sender === 'me' ? '我' : (message.senderName || importedCharacter.name)) + ': ' + (message.text || '')).join('\n'),
+                                  '请输出 JSON：{"location":"地点","time":"时间","theme":"邀约主题","letter":"角色写给用户的邀约正文"}',
+                                ].join('\n\n'),
+                                temperature: 0.9,
+                              });
+                              const cleaned = inviteResult.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+                              const parsed = JSON.parse(cleaned);
+                              setOfflineInviteData({
+                                location: typeof parsed.location === 'string' ? parsed.location : '',
+                                time: typeof parsed.time === 'string' ? parsed.time : '',
+                                theme: typeof parsed.theme === 'string' ? parsed.theme : '',
+                                letter: typeof parsed.letter === 'string' ? parsed.letter : '',
+                                inviteFrom: 'other',
+                              });
+                              showToast('已根据当前聊天气氛生成角色邀约 ✦');
+                            } catch (error) {
+                              showToast(error instanceof Error ? error.message : '生成邀约失败');
+                            }
+                          })();                        } else {
                           setOfflineInviteData({
                             ...offlineInviteData,
                             inviteFrom: mode.id as any,
