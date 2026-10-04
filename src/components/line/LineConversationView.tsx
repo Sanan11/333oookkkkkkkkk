@@ -164,7 +164,15 @@ export function LineConversationView({
   const [showPersonaManager, setShowPersonaManager] = useState(false);
   const [userPersonas, setUserPersonas] = usePersistentState<any[]>('line:user-personas', []);
   const [activePersonaId, setActivePersonaId] = usePersistentState<string | null>('line:active-persona', null);
-  const activePersona = userPersonas.find(p => p.id === activePersonaId) || userPersonas[0];
+  const activePersona = userPersonas.find(p => p.id === activePersonaId) || {
+    id: '',
+    name: '',
+    avatar: '',
+    identity: '',
+    gender: '',
+    traits: '',
+    background: '',
+  };
   const [showNewPersonaModal, setShowNewPersonaModal] = useState(false);
   const [newPersonaData, setNewPersonaData] = useState({
     name: '',
