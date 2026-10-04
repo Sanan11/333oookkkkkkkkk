@@ -144,7 +144,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                   傍晚风微凉，咖啡刚好。
                 </p>
                 <span className="font-handwriting text-[7px] text-[#9b625b] text-right">
-                  with Ethan.
+                  PRIVATE ARCHIVE.
                 </span>
               </div>
             ) : (
@@ -231,10 +231,10 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                 className="flex-1 min-w-0 cursor-pointer"
               >
                 <b className="text-[13px] font-semibold text-[var(--ink)] truncate block">
-                  Nothing's Gonna Hurt You Baby
+                  暂无正在播放
                 </b>
                 <p className="m-0 mt-1 text-[#8b8782] text-[10px] truncate font-mono">
-                  Cigarettes After Sex
+                  MUSIC APP
                 </p>
               </div>
 
@@ -319,7 +319,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               深夜
             </div>
             <div className="text-[10px] text-[#8b8782] tracking-[2px] mt-2.5 font-mono">
-              SECRET LOG · ETHAN'S VAULT
+              PRIVATE LOG
             </div>
             <div className="mt-4 font-serif-sc text-[12.5px] leading-[1.75] text-[var(--sub,#68625b)] max-w-[205px]">
               “那些不曾发给任何人的草稿，<br />和只对你开放的抽屉。”
@@ -337,7 +337,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                 <span className="text-[6px] font-mono text-[#8b8782]">DRAFT</span>
                 <p className="font-handwriting text-[8px] leading-tight text-[#8b7560]">
                   23:45 伦敦雨。<br />
-                  想立刻飞回你身边。
+                  暂无私人草稿。
                 </p>
                 <span className="font-handwriting text-[7px] text-[#9b625b] text-right">
                   private.
@@ -355,7 +355,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/40" />
                 <span className="absolute left-[6px] top-[6px] text-white/85 text-[7px] tracking-[0.9px] font-mono">
-                  LONDON RAIN
+                  PRIVATE ARCHIVE
                 </span>
                 <b className="absolute right-[6px] bottom-[5px] text-white font-serif text-[11px] font-normal">
                   23:45
@@ -378,12 +378,12 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <div className="flex items-center justify-between text-[9px] font-mono text-[#8b8782] mb-1.5">
                 <span className="flex items-center gap-1.5 text-[#1a1a1a] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#1a1a1a]" />
-                  THREADS · ETHAN
+                  THREADS · PRIVATE
                 </span>
                 <span>14分钟前发布</span>
               </div>
               <p className="font-serif-sc text-[12px] leading-relaxed text-[var(--ink)] line-clamp-2">
-                “窗外雨停了。突然想起很久以前某个人说过的傻话。说要带我看日落，结果自己在车里睡得东倒西歪…”
+                暂无动态。导入角色后，Threads 会在这里显示内容。
               </p>
               <div className="mt-2 pt-1.5 border-t border-[rgba(0,0,0,0.05)] flex items-center justify-between text-[9px] font-mono text-[#8b7560]">
                 <span>点击进入 Threads 查阅互动</span>
@@ -401,18 +401,18 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                   <span className="w-1.5 h-1.5 rounded-full bg-[#9b625b] animate-ping" />
                   查手机 · 窥探监控已就绪
                 </span>
-                <span>林工在线</span>
+                <span>暂无设备数据</span>
               </div>
               <div className="text-[11.5px] font-sans text-[#333] space-y-0.5">
                 <p className="truncate text-[var(--ink)]">
-                  <b>林工</b>：你小子今晚不是说要去接某人吗？这么拼命发补丁？
+                  暂无可查看的聊天记录
                 </p>
                 <p className="truncate text-[#8b7560] font-medium">
-                  <b>Ethan</b>：所以才让你少废话。
+                  暂无角色聊天数据
                 </p>
               </div>
               <div className="mt-2 pt-1.5 border-t border-[rgba(0,0,0,0.05)] flex items-center justify-between text-[9px] font-mono text-[#9b625b]">
-                <span>翻看 Ethan 聊天群与私密相册</span>
+                <span>等待角色与聊天数据</span>
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </div>
             </div>
