@@ -173,12 +173,13 @@ export function setCurrentScene(sceneId: string | null) {
 }
 
 export function syncOfflineEventToWorld(event: OfflineEvent) {
+  if (event.status === 'draft' || event.status === 'declined') return null;
+
   const type: WorldEventType =
     event.status === 'pending' ? 'offline.invite'
       : event.status === 'accepted' ? 'offline.accepted'
       : event.status === 'in-progress' ? 'offline.started'
-      : event.status === 'completed' ? 'offline.completed'
-      : 'offline.invite';
+      : 'offline.completed';
 
   return emitWorldEvent(type, {
     characterId: event.characterId,
