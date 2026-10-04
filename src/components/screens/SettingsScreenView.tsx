@@ -481,6 +481,29 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                 </button>
               </div>
               {settings.autoMemoryEnabled && (
+                <>
+                  <label className="block mt-2.5 text-[8px] text-[#8b8782]">记忆整理模型
+                    <input value={settings.memoryModel} onChange={e => update('memoryModel', e.target.value)} placeholder={settings.model} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] font-mono outline-none" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">整理模式
+                      <select value={settings.memoryMode} onChange={e => update('memoryMode', e.target.value as AppSettings['memoryMode'])} className="w-full mt-1 bg-transparent outline-none text-[10px]">
+                        <option value="hybrid">混合记忆 · 推荐</option><option value="diary">日记型</option><option value="facts">事实表格型</option><option value="relationship">关系型</option>
+                      </select>
+                    </label>
+                    <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">总结 Temperature
+                      <input type="number" step="0.05" min="0" max="1" value={settings.memoryTemperature} onChange={e => update('memoryTemperature', Math.max(0, Math.min(1, Number(e.target.value) || 0.2)))} className="w-full mt-1 bg-transparent outline-none text-xs font-mono" />
+                    </label>
+                  </div>
+                  <label className="block mt-2 text-[8px] text-[#8b8782]">读取最近聊天
+                    <select value={settings.memoryContextMessages} onChange={e => update('memoryContextMessages', Number(e.target.value))} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
+                      {[20,40,60,80,120].map(value => <option key={value} value={value}>最近 {value} 条</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center justify-between mt-2 p-2.5 rounded-xl bg-white/55 border border-black/5 text-[9px] text-[#6f6860]"><span>独立记忆引擎</span>
+                    <button onClick={() => update('memoryEnabled', !settings.memoryEnabled)} className="font-mono text-[#8b7560]">{settings.memoryEnabled ? 'ON' : 'OFF'}</button>
+                  </label>
+                  <label className="block mt-2.5 text-[8px] text-[#8b8782]">整理频率
                 <label className="block mt-2.5 text-[8px] text-[#8b8782]">整理频率
                   <select value={settings.autoMemoryEveryMessages} onChange={e => update('autoMemoryEveryMessages', Number(e.target.value))} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
                     {[10, 20, 30, 40, 60].map(value => <option key={value} value={value}>每 {value} 条聊天消息</option>)}
