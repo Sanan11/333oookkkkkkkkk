@@ -736,7 +736,12 @@ export function LineConversationView({
         window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'message' } }));
       }
         return;
-      } catch (error) {\n        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);\n      } finally {\n        setIsTyping(false);\n      }\n    }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
+      } finally {
+        setIsTyping(false);
+      }
+    }
 
     const replyMsgId = Date.now() + 1;
     setMessages((prev) => [
