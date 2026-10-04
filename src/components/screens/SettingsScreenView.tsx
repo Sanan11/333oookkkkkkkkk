@@ -732,8 +732,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               </div>
               <div className="text-[8px] leading-relaxed text-[#8b8782]">建议使用只允许该仓库内容读写的 Fine-grained Token。Token 不会写进 GitHub，也不会包含进项目备份。</div>
             </div>
-
-            <button onClick={() => onNavigate('project-studio')} className="mt-2 w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-[#8b7560]" />进入 Studio · AI 编程工作台</button>
+            <button onClick={() => onNavigate('project-studio')} className="mt-2 w-full py-2.5 rounded-xl bg-white/75 border border-[rgba(40,36,31,.12)] text-[10px] flex items-center justify-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-[#8b7560]" />Studio · AI 编程工作台</button>
             <button onClick={clearAll} className="mt-2 w-full py-2.5 rounded-xl bg-white/60 border border-[#cba6a0]/30 text-[#9b625b] text-[10px] flex items-center justify-center gap-1.5"><Trash2 className="w-3.5 h-3.5" />清空全部本机数据</button>
           </section>
         )}
