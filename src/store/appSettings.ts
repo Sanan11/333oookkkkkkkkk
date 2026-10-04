@@ -40,6 +40,15 @@ export interface AppSettings {
   notificationEnabled: boolean;
   proactiveMessagesEnabled: boolean;
   keepAliveMinutes: number;
+
+  soundEnabled: boolean;
+  soundVolume: number;
+  messageSoundUrl: string;
+  messageSoundRef: string;
+  momentsSoundUrl: string;
+  momentsSoundRef: string;
+  callRingtoneUrl: string;
+  callRingtoneRef: string;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -82,6 +91,15 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   notificationEnabled: false,
   proactiveMessagesEnabled: true,
   keepAliveMinutes: 5,
+
+  soundEnabled: true,
+  soundVolume: 0.65,
+  messageSoundUrl: '',
+  messageSoundRef: '',
+  momentsSoundUrl: '',
+  momentsSoundRef: '',
+  callRingtoneUrl: '',
+  callRingtoneRef: '',
 };
 
 const STORAGE_KEY = 'phone:settings';
