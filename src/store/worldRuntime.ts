@@ -143,12 +143,32 @@ export function emitWorldEvent(
     character.lastSeenAt = now;
     if (type !== 'relationship.changed') character.lastInteractionAt = now;
 
-    if (type === 'character.message') character.unread += 1;
+    if (type === 'character.message') {
+      character.unread += 1;
+      character.activity = '刚刚给你发消息';
+      character.mood = '想起了你';
+    }
+    if (type === 'offline.invite') {
+      character.activity = '正在准备与你见面';
+      character.mood = '期待';
+    }
+    if (type === 'offline.accepted') {
+      character.activity = '已经约好与你见面';
+      character.mood = '期待';
+    }
     if (type === 'offline.started') {
       character.activity = '正在与你见面';
+      character.mood = '专注';
       character.unread = Math.max(0, character.unread - 1);
     }
-    if (type === 'offline.completed') character.activity = '刚结束一次见面';
+    if (type === 'offline.message') {
+      character.activity = '正在和你保持联系';
+      character.mood = '在意';
+    }
+    if (type === 'offline.completed') {
+      character.activity = '刚结束一次见面';
+      character.mood = '满足';
+    }
   }
 
   state.events = [
@@ -212,10 +232,20 @@ export function syncCharacterRoutine(
   const current = due.length ? due[due.length - 1] : null;
   const next = ordered.find(x => x.minute > currentMinutes) || ordered[0];
 
+  // Recent interaction and an active offline scene take priority over the routine clock.
+  // Otherwise the 60s world clock would erase "正在聊天 / 正在见面" almost immediately.
+  const recentInteraction = runtime.lastInteractionAt
+    ? now.getTime() - new Date(runtime.lastInteractionAt).getTime() < 10 * 60_000
+    : false;
+  const inScene = Boolean(state.currentScene);
+
   if (current) {
     runtime.currentScheduleId = current.item.id;
     runtime.currentScheduleTitle = current.item.title;
-    runtime.activity = current.item.title;
+    if (!recentInteraction && !inScene) {
+      runtime.activity = current.item.title;
+      runtime.mood = '平静';
+    }
   }
   runtime.nextActionAt = next.item.time;
   runtime.nextActionTitle = next.item.title;
