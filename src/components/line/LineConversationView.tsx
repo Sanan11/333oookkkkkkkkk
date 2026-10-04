@@ -295,19 +295,14 @@ export function LineConversationView({
   // 状态栏
   const [showRenderedStatusBarModal, setShowRenderedStatusBarModal] = useState(false);
   const [showStatusBarSettings, setShowStatusBarSettings] = useState(false);
-  const [statusData, setStatusData] = usePersistentState(`line:status:${conversationStorageId}`, hasImportedCharacter ? {
+  const [statusData, setStatusData] = usePersistentState(`line:status:${conversationStorageId}`, {
     location: '',
     time: '',
     activity: '',
     mood: '',
     favor: '0',
-  } : {
-    location: '在家 · 书房',
-    time: '22:45',
-    activity: '翻阅摄影集，手边有一杯温热红茶',
-    mood: '平静，听着窗外的雨声，带着一丝思念',
-    favor: '93',
   });
+
   const [statusRegex, setStatusRegex] = usePersistentState(`line:status-regex:${conversationStorageId}`, '/\\{\\{status:(.*?)\\}\\}/gs');
   const [statusFormat, setStatusFormat] = usePersistentState(`line:status-format:${conversationStorageId}`, 
     '<div class="tavern-status"><span class="badge">📍 {{location}}</span> <span class="badge">🕒 {{time}}</span> <span class="badge">📖 {{activity}}</span> <span class="badge-pink">💖 好感度 {{favor}}</span><div class="mood">心境：{{mood}}</div></div>'
@@ -320,19 +315,14 @@ export function LineConversationView({
 
   // 线下邀约剧情系统 (Offline Meetup System)
   const [showOfflineInviteModal, setShowOfflineInviteModal] = useState(false);
-  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${conversationStorageId}`, hasImportedCharacter ? {
+  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${conversationStorageId}`, {
     location: '',
     time: '',
     theme: '',
     letter: '',
     inviteFrom: 'other' as 'me' | 'other',
-  } : {
-    location: '神保町·雨夜旧书屋二层咖啡阁',
-    time: '明晚 19:30',
-    theme: '私享旧胶卷洗印与夜谈',
-    letter: '前几天洗好的两卷旧胶片出来了，里面有很多你的照片。如果你明晚有空……我想亲手交给你。',
-    inviteFrom: 'other' as 'me' | 'other',
   });
+
   const [offlineInviteTheme, setOfflineInviteTheme] = usePersistentState<'white' | 'midnight' | 'parchment' | 'rose'>(`line:offline-theme:${conversationStorageId}`, 'white');
   const [offlineInviteCustomCss, setOfflineInviteCustomCss] = usePersistentState(`line:offline-css:${conversationStorageId}`, `/* 线下邀约卡片自定义样式 */
 .custom-invite-card {
