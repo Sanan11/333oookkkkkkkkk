@@ -48,7 +48,7 @@ interface LineUserProfile {
   avatar?: string;
 }
 
-export function LineAppView({ onNavigateHome }: LineAppViewProps) {
+export function LineAppView({ onNavigateHome, onNavigateScreen }: LineAppViewProps) {
   // Tabs: 'chat' | 'friends' | 'moments' | 'me'
   const [activeTab, setActiveTab] = useState<'chat' | 'friends' | 'moments' | 'me'>('chat');
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -255,6 +255,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
             setActiveChatId(null);
           }}
           onNavigateHome={onNavigateHome}
+          onNavigateScreen={onNavigateScreen}
           initialDraft={activeItem?.draft || ''}
           isGroup={activeItem?.isGroup || activeChatName === '我们的小角落'}
           isPinned={activeItem?.isPinned || false}
