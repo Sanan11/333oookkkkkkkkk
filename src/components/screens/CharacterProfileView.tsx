@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { ArrowLeft, Download, Edit3, FileDown, FilePlus2, Folder, Plus, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Brain, Download, Edit3, FileDown, FilePlus2, Folder, Plus, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 import {
@@ -244,6 +244,18 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {selected && (
+            <button
+              onClick={() => {
+                try { window.localStorage.setItem('phone:memory-active-character', selected.id); } catch {}
+                onNavigate('memory');
+              }}
+              className="w-8 h-8 rounded-full bg-white/55 border border-[rgba(40,36,31,.12)] text-[#655f59] grid place-items-center"
+              title="打开这个角色的长期记忆"
+            >
+              <Brain className="w-3.5 h-3.5" />
+            </button>
+          )}
           {selected && (
             <button
               onClick={() => setIsEditing(prev => !prev)}
