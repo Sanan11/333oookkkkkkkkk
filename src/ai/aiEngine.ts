@@ -2,16 +2,9 @@ import type { ImportedCharacter } from '../data/characterImport';
 import type { ProjectManifest, WorldBook } from '../types';
 import type { CharacterMemory } from '../store/characterMemory';
 import { buildMemoryContext } from '../store/characterMemory';
+import { DEFAULT_APP_SETTINGS, type AppSettings, readAppSettings } from '../store/appSettings';
 
-export interface AiSettings {
-  provider: 'gemini' | 'openai-compatible' | 'custom';
-  apiBaseUrl: string;
-  apiKey: string;
-  model: string;
-  streaming: boolean;
-  contextLength: number;
-  autoSave: boolean;
-}
+export type AiSettings = Pick<AppSettings, 'provider' | 'apiBaseUrl' | 'apiKey' | 'model' | 'streaming' | 'contextLength' | 'autoSave' | 'temperature'>;
 
 export interface AiReplyInput {
   settings: AiSettings;
@@ -37,6 +30,7 @@ export interface AiReplyInput {
     text?: string;
     transcript?: string;
     type?: string;
+    imageData?: string;
   }>;
   userMessage: string;
   isGroup?: boolean;
@@ -64,15 +58,17 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 export function readStoredAiSettings(): AiSettings {
-  return readJson<AiSettings>('phone:settings', {
-    provider: 'gemini',
-    apiBaseUrl: '',
-    apiKey: '',
-    model: 'gemini-2.5-flash',
-    streaming: true,
-    contextLength: 24,
-    autoSave: true,
-  });
+  const settings = readAppSettings();
+  return {
+    provider: settings.provider,
+    apiBaseUrl: settings.apiBaseUrl,
+    apiKey: settings.apiKey,
+    model: settings.model,
+    streaming: settings.streaming,
+    contextLength: settings.contextLength,
+    autoSave: settings.autoSave,
+    temperature: settings.temperature,
+  };
 }
 
 function normalizeForMatch(value: string): string {
@@ -213,6 +209,7 @@ function buildConversationMessages(input: AiReplyInput) {
     .map(message => ({
       role: message.sender === 'other' ? 'assistant' : 'user',
       content: message.text || message.transcript || '[多媒体消息]',
+      imageData: message.imageData,
     }));
 
   const last = recent[recent.length - 1];
@@ -327,10 +324,16 @@ async function callGemini(input: AiReplyInput): Promise<string> {
     systemInstruction: { parts: [{ text: system }] },
     contents: buildConversationMessages(input).map(message => ({
       role: message.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: message.content }],
+      parts: [
+        { text: message.content },
+        ...(message.imageData ? (() => {
+          const match = message.imageData.match(/^data:([^;]+);base64,(.+)$/);
+          return match ? [{ inlineData: { mimeType: match[1], data: match[2] } }] : [];
+        })() : []),
+      ],
     })),
     generationConfig: {
-      temperature: Math.max(0, Math.min(2, input.temperature ?? 0.85)),
+      temperature: Math.max(0, Math.min(2, input.temperature ?? settings.temperature ?? 0.85)),
       maxOutputTokens: 1200,
     },
   };
@@ -372,7 +375,15 @@ async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
     max_tokens: 1200,
     messages: [
       { role: 'system', content: system },
-      ...buildConversationMessages(input),
+      ...buildConversationMessages(input).map(message => ({
+        role: message.role,
+        content: message.imageData
+          ? [
+              { type: 'text', text: message.content },
+              { type: 'image_url', image_url: { url: message.imageData } },
+            ]
+          : message.content,
+      })),
     ],
   };
 
