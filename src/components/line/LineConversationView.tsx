@@ -3,6 +3,8 @@ import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
 import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
+import { generateImage, generateSpeech } from '../../ai/mediaEngine';
+import { readAppSettings } from '../../store/appSettings';
 import { getCharacterMemory } from '../../store/characterMemory';
 import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterProfile } from '../../data/characterProfiles';
@@ -567,6 +569,15 @@ export function LineConversationView({
         showToast(`AI 已读取 ${result.matchedWorldbookEntries} 条命中的世界书设定 ✦`);
       }
 
+      const latestSettings = readAppSettings();
+      if (latestSettings.voiceEnabled && latestSettings.autoSpeakAiReplies) {
+        try {
+          await generateSpeech(result.text, latestSettings);
+        } catch {
+          // Voice failure must never break the chat response.
+        }
+      }
+
       // 角色好感度微增
       if (characterProfile.canAutoChangeRelation) {
         setStatusData((prev) => ({ ...prev, favor: String(Number(prev.favor) + 1) }));
@@ -962,11 +973,60 @@ export function LineConversationView({
   };
 
   // 发送文字图片/视频/文件/语音卡片
-  const handleCreateTextCard = () => {
-    if (!creatorPrompt.trim()) {
-      showToast('先描述一下你想发送给 AI 的内容');
+  const handleCreateTextCard = async () => {
+    const prompt = creatorPrompt.trim();
+    if (!prompt) {
+      showToast('先描述一下你想发送的内容');
       return;
     }
+
+    const settings = readAppSettings();
+    setCreatorPrompt('');
+    setShowCreator(false);
+
+    if (creatorType === 'image' && settings.imageEnabled) {
+      showToast('图片模型正在生成……');
+      try {
+        const result = await generateImage(prompt, settings);
+        setMessages((prev) => [...prev, {
+          id: Date.now(),
+          sender: 'me',
+          type: 'real-media',
+          mediaType: 'image',
+          fileName: 'AI_Image.png',
+          mediaUrl: result.url,
+          time: '刚刚',
+          alt: prompt,
+        }]);
+        showToast('AI 图片已发送 ✦');
+        return;
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : '图片生成失败');
+        return;
+      }
+    }
+
+    if (creatorType === 'voice' && settings.voiceEnabled) {
+      showToast('语音正在生成……');
+      try {
+        const result = await generateSpeech(prompt, settings);
+        setMessages((prev) => [...prev, {
+          id: Date.now(),
+          sender: 'me',
+          type: 'voice',
+          transcript: prompt,
+          duration: Math.max(1, Math.round(prompt.length / 5)) + '"',
+          audioUrl: result.url || undefined,
+          time: '刚刚',
+        }]);
+        showToast(result.source === 'browser' ? '已调用浏览器语音' : 'AI 语音已发送');
+        return;
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : '语音生成失败');
+        return;
+      }
+    }
+
     const typeNames: Record<string, { label: string; descTitle: string }> = {
       image: { label: '文字图片', descTitle: '图片描述' },
       video: { label: '文字视频', descTitle: '视频描述' },
@@ -974,19 +1034,16 @@ export function LineConversationView({
       voice: { label: '文字语音', descTitle: '语音内容/描述' },
     };
     const info = typeNames[creatorType];
-    const newMsg = {
+    setMessages((prev) => [...prev, {
       id: Date.now(),
       sender: 'me',
       type: 'ai-card',
       category: creatorType,
       title: info.label,
       descTitle: info.descTitle,
-      desc: creatorPrompt.trim(),
+      desc: prompt,
       time: '刚刚',
-    };
-    setMessages((prev) => [...prev, newMsg]);
-    setCreatorPrompt('');
-    setShowCreator(false);
+    }]);
     showToast(`${info.label}已发送给角色`);
   };
 
@@ -998,15 +1055,39 @@ export function LineConversationView({
       file: '真实文件',
       voice: '真实语音',
     };
-    const newMsg = {
+
+    if (type === 'image' || type === 'voice') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const mediaUrl = typeof reader.result === 'string' ? reader.result : '';
+        const newMsg = {
+          id: Date.now(),
+          sender: 'me',
+          type: type === 'voice' ? 'voice' : 'real-media',
+          mediaType: type,
+          fileName: file.name,
+          mediaUrl,
+          audioUrl: type === 'voice' ? mediaUrl : undefined,
+          transcript: type === 'voice' ? '' : undefined,
+          duration: type === 'voice' ? '语音' : undefined,
+          time: '刚刚',
+        };
+        setMessages((prev) => [...prev, newMsg]);
+        setSubSheetType(null);
+        showToast(`${typeLabels[type]}已发送：${file.name}`);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    setMessages((prev) => [...prev, {
       id: Date.now(),
       sender: 'me',
       type: 'real-media',
       mediaType: type,
       fileName: file.name,
       time: '刚刚',
-    };
-    setMessages((prev) => [...prev, newMsg]);
+    }]);
     setSubSheetType(null);
     showToast(`${typeLabels[type]}已发送：${file.name}`);
   };
@@ -1577,11 +1658,25 @@ export function LineConversationView({
                     }}
                     className="p-3 rounded-[14px] bg-[#fafafa] border border-[#e8e8e9] space-y-1 text-xs"
                   >
-                    <div className="flex items-center gap-2 text-[#444] font-medium">
-                      <span>📁</span>
-                      <span className="truncate">{msg.fileName}</span>
-                    </div>
-                    <div className="text-[10px] text-[#999]">真实附件已发送</div>
+                    {msg.mediaType === 'image' && msg.mediaUrl ? (
+                      <div className="space-y-1.5">
+                        <img
+                          src={msg.mediaUrl}
+                          alt={msg.alt || msg.fileName}
+                          className="max-w-full max-h-[260px] rounded-[11px] object-cover cursor-pointer"
+                          onClick={() => setLightboxImg(msg.mediaUrl)}
+                        />
+                        <div className="text-[10px] text-[#999]">{msg.fileName}</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 text-[#444] font-medium">
+                          <span>📁</span>
+                          <span className="truncate">{msg.fileName}</span>
+                        </div>
+                        <div className="text-[10px] text-[#999]">真实附件已发送</div>
+                      </>
+                    )}
                   </div>
                 ) : msg.type === 'voice' ? (
                   /* 语音 */
@@ -1613,10 +1708,13 @@ export function LineConversationView({
                       <span className="text-[10px] text-[#999]">{msg.duration}</span>
                     </div>
 
+                    {msg.audioUrl && (
+                      <audio controls preload="none" src={msg.audioUrl} className="w-[190px] h-8 mt-1" />
+                    )}
                     {showTranscriptMap[msg.id] && (
                       <div className="p-2.5 rounded-[9px] bg-[#fafafa] border border-[#f0f0f1] text-[#888] text-[10px] leading-relaxed animate-in fade-in">
                         语音转文字：<br />
-                        {msg.transcript}
+                        {msg.transcript || '未提供转写'}
                       </div>
                     )}
                   </div>
