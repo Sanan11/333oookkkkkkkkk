@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
-import { usePersistentState } from '../../store/usePersistentState';
 import { ScreenType } from '../../types';
 import { LineConversationView } from './LineConversationView';
 import {
