@@ -436,14 +436,14 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
           </div>
 
           {/* Page 2 Apps: The Requested 2 Apps (Threads + 查手机) */}
-          <section className="absolute z-10 left-[18px] right-[16px] top-[565px] flex gap-[10px]">
+          <section className="absolute z-10 left-[18px] right-[16px] top-[565px] flex gap-[4px]">
             
             {/* App 1: Threads */}
             <button 
               onClick={() => onNavigate('threads')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
             >
-              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#1a1a1a] text-white border-transparent shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+              <div className="w-[54px] h-[54px] rounded-[21px] bg-[#1a1a1a] text-white border-transparent shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
                 <svg className="w-6 h-6 fill-current">
                   <use href="#threads"/>
                 </svg>
@@ -459,7 +459,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               onClick={() => onNavigate('npc')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
             >
-              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#ebe2dc] text-[#5f554f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+              <div className="w-[54px] h-[54px] rounded-[21px] bg-[#ebe2dc] text-[#5f554f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
                 <span className="text-[19px] font-serif">人</span>
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#caa9ad] border border-white" />
               </div>
@@ -471,7 +471,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               onClick={() => onNavigate('group-presets')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
             >
-              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#f0ebe5] text-[#63584f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+              <div className="w-[54px] h-[54px] rounded-[21px] bg-[#f0ebe5] text-[#63584f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
                 <span className="text-[18px] font-serif">预</span>
               </div>
               <span className="font-semibold tracking-tight text-[var(--ink)]">预设</span>
@@ -482,7 +482,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               onClick={() => onNavigate('spy-phone')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
             >
-              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#9b625b] text-white border-transparent shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+              <div className="w-[54px] h-[54px] rounded-[21px] bg-[#9b625b] text-white border-transparent shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
                 <svg className="w-6 h-6 stroke-current fill-none stroke-[1.5]">
                   <use href="#spy"/>
                 </svg>
@@ -491,6 +491,11 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <span className="font-semibold tracking-tight text-[var(--ink)]">查手机</span>
             </button>
 
+
+            <button onClick={() => onNavigate('memory')} className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group">
+              <div className="w-[54px] h-[54px] rounded-[18px] bg-[#292724] text-white grid place-items-center group-hover:scale-105 transition-transform"><span className="font-serif text-[20px]">M</span></div>
+              <span className="font-semibold tracking-tight text-[var(--ink)]">Memory</span>
+            </button>
           </section>
 
         </div>
