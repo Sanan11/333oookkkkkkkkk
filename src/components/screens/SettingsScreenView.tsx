@@ -3,6 +3,7 @@ import {
   ArrowLeft, Bell, CheckCircle2, Database, Download, Image as ImageIcon, KeyRound,
   Mic2, RefreshCw, Save, Server, Shield, SlidersHorizontal, Smartphone, Sparkles,
   Trash2, Volume2, Wifi
+  BellRing
 } from 'lucide-react';
 import type { ScreenType } from '../../types';
 import type { ImportedCharacter } from '../../data/characterImport';
@@ -12,6 +13,7 @@ import { usePersistentState } from '../../store/usePersistentState';
 import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
 import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
+import { playAppSound, saveSoundFile, type AppSoundKind } from '../../store/soundManager';
 import { exportMedia, importMedia } from '../../store/mediaVault';
 import {
   getBackgroundHeartbeat,
@@ -57,9 +59,12 @@ function prettyBytes(value: number) {
 
 export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: ScreenType) => void }) {
   const importRef = useRef<HTMLInputElement>(null);
+  const messageSoundFileRef = useRef<HTMLInputElement>(null);
+  const momentsSoundFileRef = useRef<HTMLInputElement>(null);
+  const callSoundFileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettingsState] = usePersistentState<AppSettings>('phone:settings', DEFAULT_APP_SETTINGS);
   const [notice, setNotice] = useState('');
-  const [openSection, setOpenSection] = useState<'ai' | 'voice' | 'image' | 'data' | 'background'>('ai');
+  const [openSection, setOpenSection] = useState<'ai' | 'voice' | 'image' | 'data' | 'sound' | 'background'>('ai');
   const [testing, setTesting] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -79,6 +84,19 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
     const size = new Blob([JSON.stringify(data)]).size;
     return { keys: Object.keys(data).length, size };
   }, [notice, settings]);
+
+  const uploadSound = async (kind: AppSoundKind, file?: File) => {
+    if (!file) return;
+    try {
+      const ref = await saveSoundFile(file, kind);
+      if (kind === 'message') update('messageSoundRef', ref);
+      else if (kind === 'moments') update('momentsSoundRef', ref);
+      else update('callRingtoneRef', ref);
+      notify('自定义铃声已保存到本机');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : '铃声保存失败');
+    }
+  };
 
   const notify = (message: string) => {
     setNotice(message);
@@ -295,6 +313,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
             ['voice', '语音'],
             ['image', '图片'],
             ['data', '数据'],
+            ['sound', '声音'],
             ['background', '后台'],
           ].map(([key, label]) => (
             <button
@@ -608,6 +627,42 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               <button onClick={testImage} className="py-2 rounded-xl bg-[#292724] text-white text-[9px] flex items-center justify-center gap-1"><ImageIcon className="w-3 h-3" />测试图片接口</button>
             </div>
             <div className="mt-2 text-[8.5px] text-[#8b8782] leading-relaxed">视觉理解不需要独立模型配置：LINE 上传图片时，会把图片作为多模态消息送给当前聊天模型；前提是你的模型支持 vision / multimodal。</div>
+          </section>
+        )}
+
+
+        {openSection === 'sound' && (
+          <section className="p-4 rounded-2xl bg-white/55 border border-[rgba(40,36,31,.1)]">
+            <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
+              <BellRing className="w-3.5 h-3.5" /> SOUND / RINGTONE
+            </div>
+            <button onClick={() => update('soundEnabled', !settings.soundEnabled)} className="w-full p-3 rounded-xl bg-[#ebe7df] flex items-center justify-between text-left">
+              <div><div className="text-[10px] font-semibold text-[#403b36]">系统声音</div><div className="text-[8px] text-[#8b8782] mt-0.5">消息、朋友圈更新和来电都使用这里的声音设置。</div></div>
+              <span className="text-[9px] font-mono text-[#8b7560]">{settings.soundEnabled ? 'ON' : 'OFF'}</span>
+            </button>
+            <label className="block mt-2.5 p-2.5 rounded-xl bg-white/60 text-[9px] text-[#777]">音量
+              <input type="range" min="0" max="1" step="0.05" value={settings.soundVolume} onChange={e => update('soundVolume', Number(e.target.value))} className="w-full mt-1" />
+            </label>
+            {([
+              ['message', '收到消息提示音', settings.messageSoundUrl, settings.messageSoundRef, messageSoundFileRef],
+              ['moments', '朋友圈更新提示音', settings.momentsSoundUrl, settings.momentsSoundRef, momentsSoundFileRef],
+              ['call', '来电铃声', settings.callRingtoneUrl, settings.callRingtoneRef, callSoundFileRef],
+            ] as const).map(([kind, label, url, mediaRef, fileRef]) => (
+              <div key={kind} className="mt-2.5 p-3 rounded-xl bg-[#ebe7df] border border-black/5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div><div className="text-[10px] font-semibold">{label}</div><div className="text-[8px] text-[#8b8782]">{mediaRef ? '已上传本机铃声' : url ? '使用音频链接' : '使用内置简易提示音'}</div></div>
+                  <button onClick={() => playAppSound(kind)} className="text-[9px] font-mono text-[#8b7560]">试听</button>
+                </div>
+                <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                  <input value={url} onChange={e => update(kind === 'message' ? 'messageSoundUrl' : kind === 'moments' ? 'momentsSoundUrl' : 'callRingtoneUrl', e.target.value)} placeholder="粘贴音频链接（可选）" className="min-w-0 p-2 bg-white/70 rounded-lg text-[9px] font-mono outline-none" />
+                  <button onClick={() => fileRef.current?.click()} className="px-2.5 rounded-lg bg-white border border-black/5 text-[9px]">上传</button>
+                  <input ref={fileRef} type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" className="hidden" onChange={e => uploadSound(kind, e.target.files?.[0])} />
+                </div>
+              </div>
+            ))}
+            <div className="mt-2.5 p-2.5 rounded-xl bg-white/50 border border-black/5 text-[8px] leading-relaxed text-[#8b8782]">
+              支持本地音频文件或音频 URL。上传的铃声保存在本机 IndexedDB；不会自动上传到 GitHub 数据文件。
+            </div>
           </section>
         )}
 
