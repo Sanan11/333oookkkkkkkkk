@@ -5,6 +5,9 @@ import {
   Trash2, Volume2, Wifi
 } from 'lucide-react';
 import type { ScreenType } from '../../types';
+import type { ImportedCharacter } from '../../data/characterImport';
+import type { CharacterAiProfile } from '../../store/characterAiProfiles';
+import { buildCharacterAiProfile } from '../../store/characterAiProfiles';
 import { usePersistentState } from '../../store/usePersistentState';
 import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
 import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
@@ -62,6 +65,10 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const [heartbeat, setHeartbeat] = useState(() => getBackgroundHeartbeat());
   const [includeSecretsInBackup, setIncludeSecretsInBackup] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
+  const [characters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
+  const [characterAiProfiles, setCharacterAiProfiles] = usePersistentState<CharacterAiProfile[]>('phone:character-ai-profiles', []);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
+
 
   const localStats = useMemo(() => {
     const data = collectLocalData();
@@ -77,6 +84,37 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = saveAppSettings({ [key]: value });
     setSettingsState(next);
+  };
+
+  const selectedCharacter = characters.find(character => character.id === selectedCharacterId) || null;
+  const selectedCharacterAi = selectedCharacter
+    ? characterAiProfiles.find(profile => profile.characterId === selectedCharacter.id) || null
+    : null;
+
+  const createOrUpdateCharacterAi = (patch: Partial<CharacterAiProfile>) => {
+    if (!selectedCharacter) return;
+    const base = selectedCharacterAi || buildCharacterAiProfile(
+      {
+        provider: settings.provider,
+        apiBaseUrl: settings.apiBaseUrl,
+        apiKey: settings.apiKey,
+        model: settings.model,
+        streaming: settings.streaming,
+        contextLength: settings.contextLength,
+        maxOutputTokens: settings.maxOutputTokens,
+        autoSave: settings.autoSave,
+        temperature: settings.temperature,
+      },
+      selectedCharacter.id,
+      selectedCharacter.name,
+    );
+    const updated = { ...base, ...patch, updatedAt: new Date().toISOString() };
+    setCharacterAiProfiles(prev => {
+      const index = prev.findIndex(profile => profile.id === updated.id);
+      return index >= 0
+        ? prev.map(profile => profile.id === updated.id ? updated : profile)
+        : [updated, ...prev];
+    });
   };
 
   const copyChatToMedia = (kind: 'voice' | 'image') => {
@@ -301,6 +339,68 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
                   <div className="mt-1 font-semibold text-[#8b7560]">{settings.streaming ? 'ON' : 'OFF'}</div>
                 </button>
               </div>
+            </div>
+
+            <div className="mt-3 p-3 rounded-2xl bg-white/45 border border-black/5">
+              <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">CHARACTER ROUTING · 独立 API</div>
+              <div className="mt-1 text-[9px] text-[#7a736c] leading-relaxed">每个角色可以单独指定 Provider、Base URL、Key 与模型；没有启用独立档案时，默认跟随全局 AI。</div>
+              <select
+                value={selectedCharacterId}
+                onChange={e => setSelectedCharacterId(e.target.value)}
+                className="w-full mt-2 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none"
+              >
+                <option value="">选择一个已导入角色…</option>
+                {characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
+              </select>
+              {selectedCharacter && (
+                <div className="mt-2.5 space-y-2">
+                  <button
+                    onClick={() => createOrUpdateCharacterAi({ enabled: !(selectedCharacterAi?.enabled ?? false) })}
+                    className="w-full p-2.5 rounded-xl bg-[#ebe7df] flex items-center justify-between text-left"
+                  >
+                    <div><div className="text-[10px] font-semibold text-[#403b36]">{selectedCharacter.name}</div><div className="text-[8px] text-[#8b8782] mt-0.5">{selectedCharacterAi?.enabled ? '正在使用独立 AI 配置' : '当前跟随全局 AI'}</div></div>
+                    <span className="text-[9px] font-mono text-[#8b7560]">{selectedCharacterAi?.enabled ? 'CUSTOM ON' : 'GLOBAL'}</span>
+                  </button>
+                  {selectedCharacterAi?.enabled && (
+                    <>
+                      <label className="block text-[8px] text-[#8b8782]">Provider
+                        <select value={selectedCharacterAi.provider} onChange={e => createOrUpdateCharacterAi({ provider: e.target.value as CharacterAiProfile['provider'] })} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
+                          <option value="gemini">Google Gemini</option>
+                          <option value="openai-compatible">OpenAI Compatible</option>
+                          <option value="custom">Custom Endpoint</option>
+                        </select>
+                      </label>
+                      <label className="block text-[8px] text-[#8b8782]">Base URL
+                        <input value={selectedCharacterAi.apiBaseUrl} onChange={e => createOrUpdateCharacterAi({ apiBaseUrl: e.target.value })} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[9px] font-mono outline-none" />
+                      </label>
+                      <label className="block text-[8px] text-[#8b8782]">API Key
+                        <input type="password" value={selectedCharacterAi.apiKey} onChange={e => createOrUpdateCharacterAi({ apiKey: e.target.value })} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none" />
+                      </label>
+                      <label className="block text-[8px] text-[#8b8782]">Model
+                        <input value={selectedCharacterAi.model} onChange={e => createOrUpdateCharacterAi({ model: e.target.value })} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[9px] font-mono outline-none" />
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Temperature
+                          <input type="number" step="0.05" min="0" max="2" value={selectedCharacterAi.temperature} onChange={e => createOrUpdateCharacterAi({ temperature: Math.max(0, Math.min(2, Number(e.target.value) || 0.85)) })} className="w-full mt-1 bg-transparent outline-none text-xs font-mono text-[#4a4540]" />
+                        </label>
+                        <label className="bg-white/60 rounded-xl p-2.5 text-[8px] text-[#8b8782]">Context
+                          <input type="number" min="4" max="200" value={selectedCharacterAi.contextLength} onChange={e => createOrUpdateCharacterAi({ contextLength: Math.max(4, Math.min(200, Number(e.target.value) || 24)) })} className="w-full mt-1 bg-transparent outline-none text-xs font-mono text-[#4a4540]" />
+                        </label>
+                      </div>
+                      <button onClick={() => createOrUpdateCharacterAi({
+                        apiBaseUrl: settings.apiBaseUrl,
+                        apiKey: settings.apiKey,
+                        model: settings.model,
+                        provider: settings.provider,
+                        streaming: settings.streaming,
+                        contextLength: settings.contextLength,
+                        maxOutputTokens: settings.maxOutputTokens,
+                        temperature: settings.temperature,
+                      })} className="w-full py-2 rounded-xl bg-white/70 border border-black/5 text-[9px] text-[#685f58]">复制当前全局配置到角色</button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-white/40 border border-black/5 p-2.5">
