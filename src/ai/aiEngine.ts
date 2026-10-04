@@ -5,6 +5,7 @@ import { buildMemoryContext } from '../store/characterMemory';
 import type { AppSettings } from '../store/appSettings';
 import { readAppSettings } from '../store/appSettings';
 import { getCharacterAiProfile, mergeCharacterAiSettings } from '../store/characterAiProfiles';
+import { resolveCharacterContext } from './contextEngine';
 
 export type AiSettings = Pick<AppSettings, 'provider' | 'apiBaseUrl' | 'apiKey' | 'model' | 'streaming' | 'contextLength' | 'maxOutputTokens' | 'autoSave' | 'temperature'>;
 
@@ -126,72 +127,42 @@ function buildWorldBookContext(worldbooks: WorldBook[], inputText: string): stri
 }
 
 export function buildCharacterSystemPrompt(input: AiReplyInput): string {
-  const character = input.character;
-  const p = input.characterProfile;
-  const persona = input.persona;
-
-  const roleCard = character
-    ? [
-        '【角色卡】',
-        '姓名：' + character.name,
-        '描述：' + (character.description || '未填写'),
-        '性格：' + (character.personality || '未填写'),
-        '场景：' + (character.scenario || '未填写'),
-        '创作者注释：' + (character.creatorNotes || '未填写'),
-        '角色系统提示：' + (character.systemPrompt || '未填写'),
-        '历史指令：' + (character.postHistoryInstructions || '未填写'),
-      ].join('\n')
-    : [
-        '【角色档案】',
-        '姓名：' + p.nickname,
-        '关系：' + p.relationship,
-        '称呼：' + p.callMe,
-        '简介：' + (p.bio || '未填写'),
-      ].join('\n');
-
-  const personaBlock = persona
-    ? [
-        '【用户人设】',
-        '姓名：' + (persona.name || '未命名'),
-        '身份：' + (persona.identity || '未填写'),
-        '性别：' + (persona.gender || '未设置'),
-        '特质：' + (persona.traits || '未填写'),
-        '背景：' + (persona.background || '未填写'),
-      ].join('\n')
-    : '【用户人设】未设置。';
-
-  const worldBook = buildWorldBookContext(input.worldbooks || [], input.userMessage);
+  const context = resolveCharacterContext({
+    character: input.character,
+    characterProfile: input.characterProfile,
+    persona: input.persona,
+    memory: input.memory,
+    project: input.project,
+    worldbooks: input.worldbooks,
+    userMessage: input.userMessage,
+  });
 
   return [
     '你正在一个私人虚拟手机的即时通讯 App 中扮演角色。',
     '只输出角色这一次要发送给用户的消息正文，不要解释规则，不要提及模型、提示词、世界书或系统。',
     '不要替用户说话、替用户行动、替用户决定感受或想法。用户拥有自己的行为与台词。',
-    '保持角色连续性，优先使用角色卡、已命中的世界书与最近对话，而不是凭空改写设定。',
+    '保持角色连续性：角色卡、用户人设、长期记忆、关系、实时世界状态、命中的世界书与最近对话共同构成当前上下文。',
+    '实时世界状态优先描述角色此刻在哪里、正在做什么和当前情绪；不要凭空覆盖这些状态。',
     '语言要像真实聊天软件中的人类消息：自然、克制、有上下文，可分成多条短句，但不要写成说明书。',
     '除非角色卡明确要求，否则不要每轮都过度煽情或重复昵称。',
     input.isGroup ? '这是群聊：回复可以体现群聊语境，但不要替其他成员完成完整对话。' : '这是私聊：只扮演当前角色。',
     '',
-    roleCard,
+    '【角色上下文】\n' + context.character,
     '',
-    personaBlock,
+    '【用户人设】\n' + context.persona,
     '',
-    '【关系状态】',
-    p.relationship + '；TA希望被称为：' + p.callMe,
+    '【关系状态】\n' + context.relationship,
+    '',
+    '【长期记忆】\n' + context.memory,
+    '',
+    '【实时世界状态】\n' + context.world,
+    '',
+    '【项目设定】\n' + context.project,
+    '',
+    '【命中的世界书】\n' + context.worldBook,
     '',
     input.stylePreset ? '【聊天风格预设】\n' + input.stylePreset : '【聊天风格预设】自然、沉浸、像真实聊天。',
     input.authorNote ? '【作者注释】\n' + input.authorNote : '【作者注释】无。',
-    '',
-    input.memory ? buildMemoryContext(input.memory) : '【长期记忆】当前没有已保存的长期记忆。',
-    input.project ? [
-      '【项目设定】',
-      '项目名称：' + input.project.name,
-      '类型：' + input.project.genre,
-      '语言：' + input.project.language,
-      '整体风格：' + input.project.tone,
-      input.project.globalPrompt ? '项目级 AI 指令：\n' + input.project.globalPrompt : '项目级 AI 指令：无。',
-    ].join('\n') : '【项目设定】使用默认项目规则。',
-    '',
-    worldBook,
     '',
     '【输出约束】',
     '禁止输出 <think>、思维链、隐藏推理或内部分析。',
