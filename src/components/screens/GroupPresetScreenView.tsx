@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Sparkles } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Plus, Trash2, Save, Sparkles, Download, Upload } from 'lucide-react';
 import type { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 import { deleteGroupPreset, getGroupPresets, type GroupChatPreset, upsertGroupPreset } from '../../store/groupPresets';
@@ -9,11 +9,34 @@ export function GroupPresetScreenView({ onNavigate }: { onNavigate: (screen: Scr
   const [kind, setKind] = useState<'online' | 'offline'>('online');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const importRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => presets.filter(item => item.kind === kind), [presets, kind]);
   const selected = presets.find(item => item.id === selectedId) || filtered[0] || null;
   const notify = (value: string) => { setNotice(value); window.setTimeout(() => setNotice(''), 2000); };
 
   const selectPreset = (id: string) => setSelectedId(id);
+
+  const downloadJson = (name: string, data: unknown) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const exportPresets = () => downloadJson('sane333-group-presets.json', { type:'sane333-group-presets', version:1, presets });
+  const importPresets = async (file?: File) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const incoming = Array.isArray(parsed) ? parsed : parsed?.presets;
+      if (!Array.isArray(incoming)) throw new Error('文件格式不正确');
+      const map = new Map(presets.map(item=>[item.id,item]));
+      incoming.forEach((item:any)=>map.set(String(item.id || 'group-preset-'+Date.now()), { ...item, updatedAt:new Date().toISOString() }));
+      const next=[...map.values()] as GroupChatPreset[];
+      setPresets(next); next.forEach(upsertGroupPreset);
+      setSelectedId(incoming[0]?.id || null); notify(`已导入 ${incoming.length} 个群聊预设`);
+    } catch(error) { notify(error instanceof Error ? error.message : '导入失败'); }
+    if(importRef.current) importRef.current.value='';
+  };
   const updateSelected = (patch: Partial<GroupChatPreset>) => {
     if (!selected) return;
     const next = { ...selected, ...patch, updatedAt: new Date().toISOString() };
@@ -59,6 +82,11 @@ export function GroupPresetScreenView({ onNavigate }: { onNavigate: (screen: Scr
         <button onClick={createPreset} className="w-8 h-8 rounded-full border border-[#e6e3df] grid place-items-center text-[#8e606b] hover:bg-[#faf4f5]" title="新建预设"><Plus className="w-4 h-4" /></button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={exportPresets} className="py-2 rounded-xl bg-[#292724] text-white text-[9px] flex items-center justify-center gap-1"><Download className="w-3 h-3"/>导出全部预设</button>
+          <button onClick={()=>importRef.current?.click()} className="py-2 rounded-xl bg-[#f8f7f5] border border-[#e6e3df] text-[9px] flex items-center justify-center gap-1"><Upload className="w-3 h-3"/>导入预设</button>
+          <input ref={importRef} type="file" accept=".json" className="hidden" onChange={e=>importPresets(e.target.files?.[0])}/>
+        </div>
         <div className="grid grid-cols-2 p-1 bg-[#f4f2ef] rounded-[12px] border border-[#ebe7e1]">
           <button onClick={() => { setKind('online'); setSelectedId(null); }} className={kind === 'online' ? 'py-2 rounded-[9px] bg-white text-[#8f626e] shadow-xs text-[10px] font-semibold' : 'py-2 rounded-[9px] text-[#8d8882] text-[10px]'}>线上群聊</button>
           <button onClick={() => { setKind('offline'); setSelectedId(null); }} className={kind === 'offline' ? 'py-2 rounded-[9px] bg-white text-[#8f626e] shadow-xs text-[10px] font-semibold' : 'py-2 rounded-[9px] text-[#8d8882] text-[10px]'}>线下群聊 / 剧情</button>
