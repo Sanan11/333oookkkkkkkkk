@@ -342,7 +342,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
 }
 
 function normalizeOpenAiEndpoint(baseUrl: string): string {
-  const base = baseUrl.trim().replace(/\\/+$/, '');
+  const base = baseUrl.trim().replace(/\/+$/, '');
   if (!base) throw new Error('AI_BASE_URL_MISSING');
   return /\/chat\/completions$/i.test(base) ? base : base + '/chat/completions';
 }
