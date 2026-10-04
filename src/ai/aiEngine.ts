@@ -1,5 +1,5 @@
 import type { ImportedCharacter } from '../data/characterImport';
-import type { WorldBook } from '../types';
+import type { ProjectManifest, WorldBook } from '../types';
 import type { CharacterMemory } from '../store/characterMemory';
 import { buildMemoryContext } from '../store/characterMemory';
 
@@ -31,6 +31,7 @@ export interface AiReplyInput {
   } | null;
   worldbooks?: WorldBook[];
   memory?: CharacterMemory | null;
+  project?: ProjectManifest | null;
   messages: Array<{
     sender: 'me' | 'other' | 'system' | string;
     text?: string;
@@ -186,6 +187,14 @@ export function buildCharacterSystemPrompt(input: AiReplyInput): string {
     input.authorNote ? '【作者注释】\n' + input.authorNote : '【作者注释】无。',
     '',
     input.memory ? buildMemoryContext(input.memory) : '【长期记忆】当前没有已保存的长期记忆。',
+    input.project ? [
+      '【项目设定】',
+      '项目名称：' + input.project.name,
+      '类型：' + input.project.genre,
+      '语言：' + input.project.language,
+      '整体风格：' + input.project.tone,
+      input.project.globalPrompt ? '项目级 AI 指令：\n' + input.project.globalPrompt : '项目级 AI 指令：无。',
+    ].join('\n') : '【项目设定】使用默认项目规则。',
     '',
     worldBook,
     '',
