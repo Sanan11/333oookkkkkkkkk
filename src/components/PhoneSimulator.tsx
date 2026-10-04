@@ -48,11 +48,14 @@ export function PhoneSimulator({
       if (kind) void playAppSound(kind);
     };
     const handleProactive = () => { void playAppSound('message'); };
+    const handleIncomingCall = () => { void playAppSound('call'); };
     window.addEventListener('sane333:play-sound', handleSound as EventListener);
     window.addEventListener('sane333:proactive-message', handleProactive);
+    window.addEventListener('sane333:incoming-call', handleIncomingCall);
     return () => {
       window.removeEventListener('sane333:play-sound', handleSound as EventListener);
       window.removeEventListener('sane333:proactive-message', handleProactive);
+      window.removeEventListener('sane333:incoming-call', handleIncomingCall);
     };
   }, []);
 
