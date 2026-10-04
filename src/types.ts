@@ -11,6 +11,7 @@ export type ScreenType =
   | 'music'
   | 'notes'
   | 'calendar'
+  | 'npc'
   | 'world-book'
   | 'threads'
   | 'spy-phone'
