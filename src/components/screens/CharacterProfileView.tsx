@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ArrowLeft, Download, FileDown, FilePlus2, ShieldCheck, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, FileDown, FilePlus2, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { ScreenType } from '../../types';
 import { usePersistentState } from '../../store/usePersistentState';
 import {
@@ -31,11 +31,19 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     null,
   );
   const [notice, setNotice] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const selected = characters.find(character => character.id === selectedId) || characters[0] || null;
 
   const showNotice = (message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(''), 2200);
+  };
+
+  const patchSelected = (patch: Partial<ImportedCharacter>) => {
+    if (!selected) return;
+    setCharacters(prev =>
+      prev.map(item => item.id === selected.id ? { ...item, ...patch } : item)
+    );
   };
 
   const handleImport = async (file?: File) => {
@@ -50,6 +58,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
         return [parsed, ...prev];
       });
       setSelectedId(parsed.id);
+      setIsEditing(false);
       showNotice(`已导入「${parsed.name}」 · ${parsed.sourceFormat.toUpperCase()}`);
     } catch (error) {
       showNotice(error instanceof Error ? error.message : '角色卡解析失败');
@@ -62,6 +71,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
     if (!selected) return;
     setCharacters(prev => prev.filter(item => item.id !== selected.id));
     setSelectedId(characters.find(item => item.id !== selected.id)?.id || null);
+    setIsEditing(false);
     showNotice(`已移除「${selected.name}」`);
   };
 
@@ -90,13 +100,24 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
           </div>
         </div>
 
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="w-8 h-8 rounded-full bg-[#292724] text-white grid place-items-center hover:bg-black active:scale-95 transition-all"
-          title="导入角色卡"
-        >
-          <FilePlus2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {selected && (
+            <button
+              onClick={() => setIsEditing(prev => !prev)}
+              className="w-8 h-8 rounded-full bg-white/55 border border-[rgba(40,36,31,.12)] text-[#655f59] grid place-items-center"
+              title={isEditing ? '关闭编辑' : '编辑角色卡'}
+            >
+              {isEditing ? <X className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-8 h-8 rounded-full bg-[#292724] text-white grid place-items-center hover:bg-black active:scale-95 transition-all"
+            title="导入角色卡"
+          >
+            <FilePlus2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -138,7 +159,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
               {characters.map(character => (
                 <button
                   key={character.id}
-                  onClick={() => setSelectedId(character.id)}
+                  onClick={() => { setSelectedId(character.id); setIsEditing(false); }}
                   className={`shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-medium transition-all ${
                     selected?.id === character.id
                       ? 'bg-[#292724] text-white border-[#292724]'
@@ -189,23 +210,63 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                 </div>
 
                 <div className="p-4 rounded-2xl bg-[#ebe7df] border border-[rgba(40,36,31,.12)]">
-                  <div className="text-[8px] tracking-[1.5px] font-mono text-[#8b8782] mb-1">
-                    CHARACTER ESSENCE
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-[8px] tracking-[1.5px] font-mono text-[#8b8782]">
+                      CHARACTER ESSENCE
+                    </div>
+                    {isEditing && (
+                      <span className="text-[8px] font-mono text-[#9b625b]">EDIT MODE · 自动保存</span>
+                    )}
                   </div>
-                  <div className="space-y-3 text-xs leading-relaxed text-[#443f3a] font-serif-sc">
-                    <section>
-                      <div className="text-[8px] font-mono text-[#8b8782] mb-1">DESCRIPTION</div>
-                      <p className="whitespace-pre-wrap">{selected.description || '未填写'}</p>
-                    </section>
-                    <section>
-                      <div className="text-[8px] font-mono text-[#8b8782] mb-1">PERSONALITY</div>
-                      <p className="whitespace-pre-wrap">{selected.personality || '未填写'}</p>
-                    </section>
-                    <section>
-                      <div className="text-[8px] font-mono text-[#8b8782] mb-1">SCENARIO</div>
-                      <p className="whitespace-pre-wrap">{selected.scenario || '未填写'}</p>
-                    </section>
-                  </div>
+
+                  {isEditing ? (
+                    <div className="space-y-2.5 text-[10px]">
+                      {([
+                        ['description', 'DESCRIPTION', '角色整体描述'],
+                        ['personality', 'PERSONALITY', '性格 / 说话方式'],
+                        ['scenario', 'SCENARIO', '当前世界 / 场景背景'],
+                        ['firstMessage', 'FIRST MESSAGE', '首次开场白'],
+                        ['exampleDialogue', 'EXAMPLE DIALOGUE', '示例对话'],
+                        ['creatorNotes', 'CREATOR NOTES', '创作者注释'],
+                        ['systemPrompt', 'SYSTEM PROMPT', '角色专属系统指令'],
+                        ['postHistoryInstructions', 'POST HISTORY', '历史消息后的额外指令'],
+                      ] as Array<[keyof ImportedCharacter, string, string]>).map(([key, label, placeholder]) => (
+                        <label key={String(key)} className="block">
+                          <span className="text-[8px] font-mono text-[#8b8782]">{label}</span>
+                          <textarea
+                            value={String(selected[key] ?? '')}
+                            onChange={e => patchSelected({ [key]: e.target.value } as Partial<ImportedCharacter>)}
+                            placeholder={placeholder}
+                            className="w-full mt-1 min-h-[54px] bg-white/65 border border-[rgba(40,36,31,.1)] rounded-xl p-2.5 outline-none resize-y font-serif-sc leading-relaxed"
+                          />
+                        </label>
+                      ))}
+                      <label className="block">
+                        <span className="text-[8px] font-mono text-[#8b8782]">TAGS</span>
+                        <input
+                          value={selected.tags.join(', ')}
+                          onChange={e => patchSelected({ tags: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })}
+                          placeholder="标签1, 标签2"
+                          className="w-full mt-1 bg-white/65 border border-[rgba(40,36,31,.1)] rounded-xl px-2.5 py-2 outline-none"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-xs leading-relaxed text-[#443f3a] font-serif-sc">
+                      <section>
+                        <div className="text-[8px] font-mono text-[#8b8782] mb-1">DESCRIPTION</div>
+                        <p className="whitespace-pre-wrap">{selected.description || '未填写'}</p>
+                      </section>
+                      <section>
+                        <div className="text-[8px] font-mono text-[#8b8782] mb-1">PERSONALITY</div>
+                        <p className="whitespace-pre-wrap">{selected.personality || '未填写'}</p>
+                      </section>
+                      <section>
+                        <div className="text-[8px] font-mono text-[#8b8782] mb-1">SCENARIO</div>
+                        <p className="whitespace-pre-wrap">{selected.scenario || '未填写'}</p>
+                      </section>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
