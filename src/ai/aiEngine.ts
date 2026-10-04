@@ -4,8 +4,9 @@ import type { CharacterMemory } from '../store/characterMemory';
 import { buildMemoryContext } from '../store/characterMemory';
 import type { AppSettings } from '../store/appSettings';
 import { readAppSettings } from '../store/appSettings';
+import { getCharacterAiProfile, mergeCharacterAiSettings } from '../store/characterAiProfiles';
 
-export type AiSettings = Pick<AppSettings, 'provider' | 'apiBaseUrl' | 'apiKey' | 'model' | 'streaming' | 'contextLength' | 'autoSave' | 'temperature'>;
+export type AiSettings = Pick<AppSettings, 'provider' | 'apiBaseUrl' | 'apiKey' | 'model' | 'streaming' | 'contextLength' | 'maxOutputTokens' | 'autoSave' | 'temperature'>;
 
 export interface AiReplyInput {
   settings: AiSettings;
@@ -48,18 +49,22 @@ export interface AiReplyResult {
   matchedWorldbookEntries: number;
 }
 
-export function readStoredAiSettings(): AiSettings {
+export function readStoredAiSettings(characterId?: string, characterName?: string): AiSettings {
   const settings = readAppSettings();
-  return {
+  const base: AiSettings = {
     provider: settings.provider,
     apiBaseUrl: settings.apiBaseUrl,
     apiKey: settings.apiKey,
     model: settings.model,
     streaming: settings.streaming,
     contextLength: settings.contextLength,
+    maxOutputTokens: settings.maxOutputTokens,
     autoSave: settings.autoSave,
     temperature: settings.temperature,
   };
+
+  if (!characterId && !characterName) return base;
+  return mergeCharacterAiSettings(base, getCharacterAiProfile(characterId || characterName || '', characterName));
 }
 
 function normalizeForMatch(value: string): string {
