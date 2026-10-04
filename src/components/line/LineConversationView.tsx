@@ -569,6 +569,23 @@ export function LineConversationView({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const onProactive = (event: Event) => {
+      const customEvent = event as CustomEvent<{ characterName?: string }>;
+      if (customEvent.detail?.characterName !== contactName) return;
+
+      try {
+        const raw = window.localStorage.getItem(`line:conversation:${contactName}`);
+        if (raw) setMessages(JSON.parse(raw));
+      } catch {
+        // Keep the current conversation state.
+      }
+    };
+
+    window.addEventListener('sane333:proactive-message', onProactive);
+    return () => window.removeEventListener('sane333:proactive-message', onProactive);
+  }, [contactName]);
+
   // Keep the parent chat list synchronized with the newest message.
   useEffect(() => {
     if (!hasMountedConversationRef.current) {
