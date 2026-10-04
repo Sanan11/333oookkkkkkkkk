@@ -18,6 +18,14 @@ export type ScreenType =
   | 'offline-story'
   | 'project-studio';
 
+export interface CharacterGroup {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CharacterInfo {
   id: string;
   name: string;
@@ -76,6 +84,9 @@ export interface OfflineEvent {
   letter: string;
   status: 'draft' | 'pending' | 'accepted' | 'declined' | 'in-progress' | 'completed';
   createdAt: string;
+  updatedAt?: string;
+  sceneIntro?: string;
+  sceneLog?: Array<{ id: string; speaker: 'role' | 'me' | 'narrator'; text: string; createdAt: string }>;
 }
 
 export interface WidgetConfig {
