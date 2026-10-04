@@ -1079,7 +1079,7 @@ export function LineConversationView({
       const reply = await generateCreativeText({
         settings,
         systemPrompt: [
-          '你正在 Sane333 LINE 中扮演当前角色。',
+          '你正在私人 LINE 中扮演当前角色。',
           '用户刚刚接受了你发出的线下见面邀约。',
           '只输出角色下一条真实聊天消息。',
           '不要替用户说话，不要替用户行动，不要输出思维链，不要写成旁白。',
