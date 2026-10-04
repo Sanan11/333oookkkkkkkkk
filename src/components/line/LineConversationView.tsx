@@ -726,6 +726,7 @@ export function LineConversationView({
         });
         setMessages(prev => prev.map(m => m.id === replyMsgId ? { ...m, text: result.text, senderName: character.name, aiModel: result.model, matchedWorldbookEntries: result.matchedWorldbookEntries } : m));
         workingMessages = [...workingMessages, { id: replyMsgId, sender: 'other', senderName: character.name, text: result.text }];
+        window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'message' } }));
       }
         return;\n      } catch (error) {\n        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);\n      } finally {\n        setIsTyping(false);\n      }\n    }
 
@@ -787,6 +788,8 @@ export function LineConversationView({
             : m
         )
       );
+
+      window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'message' } }));
 
       if (result.matchedWorldbookEntries > 0) {
         showToast(`AI 已读取 ${result.matchedWorldbookEntries} 条命中的世界书设定 ✦`);
