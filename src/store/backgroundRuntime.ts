@@ -1,4 +1,5 @@
 import { readAppSettings } from './appSettings';
+import { runProactiveCatchup } from './proactiveRuntime';
 
 const HEARTBEAT_KEY = 'phone:background-heartbeat';
 const ACTIVITY_KEY = 'phone:last-active-at';
@@ -52,6 +53,8 @@ export function startBackgroundRuntime() {
   const tick = () => {
     markUserActivity();
     const settings = readAppSettings();
+
+    void runProactiveCatchup();
 
     if (settings.notificationEnabled && 'Notification' in window && Notification.permission === 'granted') {
       document.dispatchEvent(new CustomEvent('sane333:background-tick'));
