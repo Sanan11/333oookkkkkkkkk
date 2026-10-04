@@ -15,6 +15,30 @@ interface LineAppViewProps {
   onNavigateScreen?: (screen: ScreenType) => void;
 }
 
+interface LineChatItem {
+  id: string;
+  name: string;
+  characterId?: string;
+  variantLabel?: string;
+  groupId?: string;
+  time: string;
+  preview: string;
+  unread: number;
+  isPinned: boolean;
+  isMuted: boolean;
+  draft: string;
+  isGroup: boolean;
+}
+
+interface LineFriend {
+  name: string;
+  characterId?: string;
+  variantLabel?: string;
+  note: string;
+  online: boolean;
+  pinyin: string;
+}
+
 export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   // Tabs: 'chat' | 'friends' | 'moments' | 'me'
   const [activeTab, setActiveTab] = useState<'chat' | 'friends' | 'moments' | 'me'>('chat');
@@ -91,7 +115,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Chat Data with Pin, Mute, Draft, and Group capabilities
-  const [chatItems, setChatItems] = usePersistentState('line:chat-items', [
+  const [chatItems, setChatItems] = usePersistentState<LineChatItem[]>('line:chat-items', [
     {
       id: '1',
       name: '顾言',
@@ -244,7 +268,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   ]);
 
   // Friends Data
-  const [friendsList, setFriendsList] = usePersistentState('line:friends-list', [
+  const [friendsList, setFriendsList] = usePersistentState<LineFriend[]>('line:friends-list', [
     { name: '顾言', note: '心意相通 · 晚间常伴', online: true, pinyin: 'G' },
     { name: '小夏', note: '今天也在慢慢生活', online: true, pinyin: 'X' },
     { name: 'Haruka', note: '东京 · 18:24', online: true, pinyin: 'H' },
