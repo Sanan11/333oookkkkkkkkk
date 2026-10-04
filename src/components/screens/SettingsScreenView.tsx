@@ -169,6 +169,18 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
           </button>
         </section>
 
+        <button
+          onClick={() => onNavigate('project-studio')}
+          className="w-full px-4 py-3 rounded-2xl bg-[#292724] text-white text-left flex items-center justify-between"
+        >
+          <div>
+            <div className="text-[8px] font-mono tracking-[1.5px] text-white/55">PROJECT STUDIO</div>
+            <div className="mt-1 text-xs font-semibold">项目工作台</div>
+            <div className="mt-0.5 text-[9px] text-white/55">在 App 内直接修改项目内容与 AI 规则</div>
+          </div>
+          <span className="text-sm text-white/65">→</span>
+        </button>
+
         <section className="p-4 rounded-2xl bg-[#eee9df] border border-[rgba(40,36,31,.12)]">
           <div className="flex items-center gap-2 text-[8px] font-mono tracking-[1.5px] text-[#8b8782] mb-3">
             <Database className="w-3 h-3" /> LOCAL DATA
