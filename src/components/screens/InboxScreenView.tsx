@@ -8,45 +8,7 @@ interface InboxScreenViewProps {
 }
 
 export function InboxScreenView({ onNavigate, onSelectChat }: InboxScreenViewProps) {
-  const letters = [
-    {
-      id: 'ethan',
-      name: 'Ethan',
-      location: 'LONDON 21:42',
-      snippet: '在看你发来的照片了，真好看。',
-      unread: 2,
-      tag: 'COMPANION',
-      date: 'TODAY',
-    },
-    {
-      id: 'chenglin',
-      name: '程凛',
-      location: 'SHANGHAI 20:15',
-      snippet: '明天见，别忘了带伞。独栋独院已确认留好。',
-      unread: 1,
-      tag: 'THREAD',
-      date: 'TODAY',
-    },
-    {
-      id: 'linyu',
-      name: '林予',
-      location: 'PARIS 19:03',
-      snippet: '我到家了，刚吃完饭。工作结束，去吃好吃的！',
-      unread: 0,
-      tag: 'DAILY',
-      date: 'YESTERDAY',
-    },
-    {
-      id: 'gavin',
-      name: 'Gavin',
-      location: 'TOKYO 14:10',
-      snippet: '下次一起去看展吧。下周的拍摄日程我发你了。',
-      unread: 0,
-      tag: 'ARCHIVE',
-      date: 'SEP 28',
-    }
-  ];
-
+  const letters = [];
   return (
     <div 
       className="relative w-full h-full flex flex-col justify-between select-none overflow-hidden"
