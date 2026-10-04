@@ -114,6 +114,24 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
   };
 
 
+  const publishMusicInviteToLine = (session: MusicStrangerSession) => {
+    if (typeof window === 'undefined') return;
+    const chatKey = 'line:conversation:' + session.id;
+    const existingRaw = window.localStorage.getItem(chatKey);
+    if (!existingRaw) {
+      window.localStorage.setItem(chatKey, JSON.stringify([{
+        id: Date.now(),
+        sender: 'me',
+        senderName: '我',
+        text: '邀请一起听歌：《' + session.track.name + '》',
+        time: '刚刚',
+        type: 'music-together',
+        musicSession: session,
+      }]));
+    }
+    window.dispatchEvent(new CustomEvent('sane333:music-invite-created', { detail: { session } }));
+  };
+
   const startDirectListening = async (character: ImportedCharacter) => {
     if (!currentTrack) {
       showToast('先播放一首歌，再邀请角色');
@@ -134,6 +152,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
     };
     setStrangerSession(session);
     saveStrangerSession(session);
+    publishMusicInviteToLine(session);
     setShowInviteCharacter(false);
     setStrangerLoading(true);
     setStrangerReaction('');
@@ -206,6 +225,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
     };
     setStrangerSession(session);
     saveStrangerSession(session);
+    publishMusicInviteToLine(session);
     setStrangerLoading(true);
     setStrangerReaction('');
     const reaction = await askStrangerReaction(session, currentTrack);
