@@ -146,7 +146,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
             </button>
           )}
 
-          {/* Film Photo Polaroid pinned diagonally (Click to Flip!) */
+          {/* Film Photo Polaroid pinned diagonally (Click to Flip!) */}
           <div 
             onClick={() => setIsPhotoFlipped(!isPhotoFlipped)}
             className="absolute z-10 right-[17px] top-[181px] w-[84px] h-[106px] rotate-[4deg] p-[5px_5px_15px] bg-[var(--paper,#eee9df)] shadow-[0_7px_18px_rgba(45,37,30,.09)] opacity-90 cursor-pointer hover:rotate-0 hover:scale-105 transition-all group"
