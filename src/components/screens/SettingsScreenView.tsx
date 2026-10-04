@@ -410,6 +410,25 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
               </div>
             </div>
 
+            <div className="mt-3 p-3 rounded-2xl bg-white/45 border border-black/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[8px] font-mono tracking-[1.5px] text-[#8b8782]">MEMORY / 自动长期记忆</div>
+                  <div className="mt-1 text-[9px] text-[#6f6860]">聊天达到指定消息数后，AI 会整理值得长期保留的关系、经历与偏好。</div>
+                </div>
+                <button onClick={() => update('autoMemoryEnabled', !settings.autoMemoryEnabled)} className="text-[9px] font-mono text-[#8b7560]">
+                  {settings.autoMemoryEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              {settings.autoMemoryEnabled && (
+                <label className="block mt-2.5 text-[8px] text-[#8b8782]">整理频率
+                  <select value={settings.autoMemoryEveryMessages} onChange={e => update('autoMemoryEveryMessages', Number(e.target.value))} className="w-full mt-1 bg-white/75 rounded-xl p-2.5 text-[10px] outline-none">
+                    {[10, 20, 30, 40, 60].map(value => <option key={value} value={value}>每 {value} 条聊天消息</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button disabled={testing} onClick={async () => {
                 setTesting(true);
