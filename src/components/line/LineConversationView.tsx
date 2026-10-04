@@ -694,7 +694,8 @@ export function LineConversationView({
       );
     }, 1200);
 
-    if (isGroup) {\n      try {
+    if (isGroup) {
+      try {
       if (groupAiMembers.length === 0) {
         showToast('这个群还没有导入可接入 AI 的角色卡');
         return;
@@ -722,7 +723,7 @@ export function LineConversationView({
           messages: workingMessages,
           userMessage: userText,
           isGroup: true,
-          authorNote: [authorsNote, '群聊预设：' + activeGroupPreset.name, activeGroupPreset.systemPrompt, groupNoticeText ? '群公告：' + groupNoticeText : ''].filter(Boolean).join('\\n'),
+          authorNote: [authorsNote, '群聊预设：' + activeGroupPreset.name, activeGroupPreset.systemPrompt, groupNoticeText ? '群公告：' + groupNoticeText : ''].filter(Boolean).join('\n'),
           stylePreset: activeCotPreset?.title || selectedPreset,
           temperature: Number(presetTemp) || 0.85,
           onDelta: delta => {
@@ -734,7 +735,8 @@ export function LineConversationView({
         workingMessages = [...workingMessages, { id: replyMsgId, sender: 'other', senderName: character.name, text: result.text }];
         window.dispatchEvent(new CustomEvent('sane333:play-sound', { detail: { kind: 'message' } }));
       }
-        return;\n      } catch (error) {\n        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);\n      } finally {\n        setIsTyping(false);\n      }\n    }
+        return;
+      } catch (error) {\n        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);\n      } finally {\n        setIsTyping(false);\n      }\n    }
 
     const replyMsgId = Date.now() + 1;
     setMessages((prev) => [
