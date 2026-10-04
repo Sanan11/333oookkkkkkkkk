@@ -43,8 +43,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
   }, []);
 
   const cities = [
-    { city: 'PRIVATE FRAME', temp: '22°', sky: 'CLEAR SKY', icon: '☼', note: 'FILM NOTE 08' },
-    { city: 'LONDON', temp: '18°', sky: 'RAINY NIGHT', icon: '☽', note: 'FILM NOTE 09' },
+    { city: 'YOUR CITY', temp: '--', sky: 'NO WEATHER DATA', icon: '○', note: 'EMPTY WIDGET' },
   ];
   const currentCity = cities[cityIndex];
 
@@ -126,7 +125,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               {currentMonthString}
             </div>
             <div className="mt-5 font-serif-sc text-[13px] leading-[1.8] text-[var(--sub,#68625b)] max-w-[205px]">
-              “把今天留给自己。<br />剩下的事情，明天再说。”
+              “这是你的私人设备。<br />内容由你自己建立。”
             </div>
           </div>
 
@@ -144,7 +143,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
                   这里还没有私人便签。
                 </p>
                 <span className="font-handwriting text-[7px] text-[#9b625b] text-right">
-                  PRIVATE ARCHIVE.
+                  EMPTY FRAME.
                 </span>
               </div>
             ) : (
@@ -159,7 +158,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/40" />
                 <span className="absolute left-[6px] top-[6px] text-white/85 text-[7px] tracking-[0.9px] font-mono">
-                  LOS ANGELES
+                  EMPTY FRAME
                 </span>
                 <b className="absolute right-[6px] bottom-[5px] text-white font-serif text-[11px] font-normal">
                   {currentTime}
@@ -363,7 +362,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               </div>
             )}
             <div className="absolute left-[5px] bottom-[3px] text-[7px] tracking-[0.8px] text-[#6f685f] whitespace-nowrap font-mono">
-              {isPhotoFlippedP2 ? 'CLICK FLIP' : 'DRAFT 23:45'}
+              {isPhotoFlippedP2 ? 'CLICK FLIP' : 'NO PHOTO YET'}
             </div>
           </div>
 
@@ -502,45 +501,34 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
 
       {/* ========================================================================= */}
       {/* PERFECT FUSION DOCK (Persists across pages) */}
-      {/* ========================================================================= */}
       <div 
         className="absolute z-20 left-[16px] right-[16px] bottom-[28px] h-[92px] rounded-[30px] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_14px_38px_rgba(48,40,32,.08)] grid grid-cols-4 items-center px-2 backdrop-blur-2xl"
         style={{ background: 'var(--glass, rgba(248,246,242,.72))' }}
       >
-        <button 
-          onClick={() => onNavigate('character-profile')}
-          className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group"
-        >
+        <button onClick={() => onNavigate('character-profile')} className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group">
           <div className="w-[46px] h-[46px] rounded-[15px] bg-[var(--icon,rgba(248,245,239,.72))] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_4px_12px_rgba(52,43,34,.05)] grid place-items-center group-hover:scale-105 group-hover:bg-white transition-all">
-            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5] stroke-linecap-round stroke-linejoin-round">
-              <use href="#globe"/>
-            </svg>
+            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5]"><use href="#card"/></svg>
           </div>
           <span className="font-medium">角色档案</span>
         </button>
 
-        <button 
-          onClick={onToggleTheme || onOpenSheet}
-          className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group"
-          title="切换外观主题"
-        >
+        <button onClick={() => onNavigate('world-book')} className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group">
+          <div className="w-[46px] h-[46px] rounded-[15px] bg-[var(--icon,rgba(248,245,239,.72))] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_4px_12px_rgba(52,43,34,.05)] grid place-items-center group-hover:scale-105 group-hover:bg-white transition-all">
+            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5]"><use href="#book"/></svg>
+          </div>
+          <span className="font-medium">世界书</span>
+        </button>
+
+        <button onClick={onToggleTheme || onOpenSheet} className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group" title="切换外观主题">
           <div className="w-[46px] h-[46px] rounded-[15px] bg-[var(--icon,rgba(248,245,239,.72))] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_4px_12px_rgba(52,43,34,.05)] grid place-items-center group-hover:scale-105 group-hover:bg-white transition-all text-[#8b7560]">
-            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5] stroke-linecap-round stroke-linejoin-round">
-              <use href="#look"/>
-            </svg>
+            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5]"><use href="#look"/></svg>
           </div>
           <span className="font-medium">外观</span>
         </button>
 
-        <button 
-          onClick={() => onNavigate('settings')}
-          className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group"
-          title="系统设置与自定义"
-        >
+        <button onClick={() => onNavigate('settings')} className="flex flex-col items-center gap-1.5 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] hover:text-[var(--ink)] active:scale-95 transition-all group" title="系统设置与自定义">
           <div className="w-[46px] h-[46px] rounded-[15px] bg-[var(--icon,rgba(248,245,239,.72))] border border-[var(--edge,rgba(255,255,255,.6))] shadow-[0_4px_12px_rgba(52,43,34,.05)] grid place-items-center group-hover:scale-105 group-hover:bg-white transition-all">
-            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5] stroke-linecap-round stroke-linejoin-round">
-              <use href="#gear"/>
-            </svg>
+            <svg className="w-[22px] h-[22px] stroke-current fill-none stroke-[1.5]"><use href="#gear"/></svg>
           </div>
           <span className="font-medium">设置</span>
         </button>
