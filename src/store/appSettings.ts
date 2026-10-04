@@ -12,6 +12,11 @@ export interface AppSettings {
   autoMemoryEnabled: boolean;
   autoMemoryEveryMessages: number;
   temperature: number;
+  memoryEnabled: boolean;
+  memoryMode: 'hybrid' | 'diary' | 'facts' | 'relationship';
+  memoryModel: string;
+  memoryTemperature: number;
+  memoryContextMessages: number;
 
   voiceEnabled: boolean;
   voiceProvider: 'browser' | 'openai-compatible' | 'custom';
@@ -63,6 +68,11 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   autoMemoryEnabled: true,
   autoMemoryEveryMessages: 20,
   temperature: 0.85,
+  memoryEnabled: true,
+  memoryMode: 'hybrid',
+  memoryModel: 'gemini-2.5-flash',
+  memoryTemperature: 0.2,
+  memoryContextMessages: 40,
 
   voiceEnabled: false,
   voiceProvider: 'browser',
