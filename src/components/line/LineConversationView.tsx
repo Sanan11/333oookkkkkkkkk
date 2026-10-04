@@ -194,7 +194,7 @@ export function LineConversationView({
       isDefault: false,
     }
   ]);
-  const [activePersonaId, setActivePersonaId] = useState('p1');
+  const [activePersonaId, setActivePersonaId] = usePersistentState('line:active-persona', 'p1');
   const activePersona = userPersonas.find(p => p.id === activePersonaId) || userPersonas[0];
   const [showNewPersonaModal, setShowNewPersonaModal] = useState(false);
   const [newPersonaData, setNewPersonaData] = useState({
@@ -207,8 +207,8 @@ export function LineConversationView({
 
   // 美化管理器与自定义 CSS 编辑器 (Custom CSS Manager)
   const [showCssManager, setShowCssManager] = useState(false);
-  const [currentWallpaper, setCurrentWallpaper] = useState<'pure-white' | 'warm-light' | 'tokyo-rain' | 'rose-mist'>('pure-white');
-  const [customCss, setCustomCss] = useState(`/* 酒馆自定义样式 (Custom CSS) */
+  const [currentWallpaper, setCurrentWallpaper] = usePersistentState<'pure-white' | 'warm-light' | 'tokyo-rain' | 'rose-mist'>(`line:wallpaper:${contactName}`, 'pure-white');
+  const [customCss, setCustomCss] = usePersistentState(`line:custom-css:${contactName}`, `/* 酒馆自定义样式 (Custom CSS) */
 .custom-chat-view {
   --bubble-border-radius: 16px;
 }
@@ -226,7 +226,7 @@ export function LineConversationView({
 }`);
 
   // 酒馆角色核心档案
-  const [characterProfile, setCharacterProfile] = useState({
+  const [characterProfile, setCharacterProfile] = usePersistentState(`line:character-profile:${contactName}`, {
     nickname: contactName || '顾言',
     birthday: '11月22日 (天蝎座)',
     relationship: '暗恋未满 · 彼此在意的挚友',
@@ -236,7 +236,7 @@ export function LineConversationView({
   });
 
   // 酒馆世界书条目库 (Lorebook Entries)
-  const [lorebooks, setLorebooks] = useState([
+  const [lorebooks, setLorebooks] = usePersistentState(`line:lorebooks:${contactName}`, [
     {
       id: 'lb1',
       title: '《东京雨夜日常·核心世界书》',
@@ -270,7 +270,7 @@ export function LineConversationView({
 
   // 酒馆思维链预设系统 (Chain of Thought Presets)
   const [showCotPresetModal, setShowCotPresetModal] = useState(false);
-  const [cotPresets, setCotPresets] = useState([
+  const [cotPresets, setCotPresets] = usePersistentState('line:cot-presets', [
     {
       id: 'cot-1',
       title: '深度心理侧写与情感博弈预设',
@@ -326,34 +326,34 @@ export function LineConversationView({
 - 先哄她好好睡觉，其他什么都不重要。`,
     },
   ]);
-  const [activeCotPresetId, setActiveCotPresetId] = useState('cot-1');
+  const [activeCotPresetId, setActiveCotPresetId] = usePersistentState(`line:cot-active:${contactName}`, 'cot-1');
   const activeCotPreset = cotPresets.find((p) => p.id === activeCotPresetId) || cotPresets[0];
-  const [customCotTemplate, setCustomCotTemplate] = useState(activeCotPreset.template);
+  const [customCotTemplate, setCustomCotTemplate] = usePersistentState(`line:cot-custom:${contactName}`, activeCotPreset.template);
 
   // 酒馆预设 (Presets)
-  const [selectedPreset, setSelectedPreset] = useState<'immersive' | 'casual' | 'slowburn' | 'sweet'>('immersive');
-  const [presetTemp, setPresetTemp] = useState('0.85');
-  const [presetContextLength, setPresetContextLength] = useState('20轮');
+  const [selectedPreset, setSelectedPreset] = usePersistentState(`line:preset:${contactName}`, 'immersive' as 'immersive' | 'casual' | 'slowburn' | 'sweet');
+  const [presetTemp, setPresetTemp] = usePersistentState(`line:preset-temp:${contactName}`, '0.85');
+  const [presetContextLength, setPresetContextLength] = usePersistentState(`line:preset-context:${contactName}`, '20轮');
 
   // 状态栏
   const [showRenderedStatusBarModal, setShowRenderedStatusBarModal] = useState(false);
   const [showStatusBarSettings, setShowStatusBarSettings] = useState(false);
-  const [statusData, setStatusData] = useState({
+  const [statusData, setStatusData] = usePersistentState(`line:status:${contactName}`, {
     location: '在家 · 书房',
     time: '22:45',
     activity: '翻阅摄影集，手边有一杯温热红茶',
     mood: '平静，听着窗外的雨声，带着一丝思念',
     favor: '93',
   });
-  const [statusRegex, setStatusRegex] = useState('/\\{\\{status:(.*?)\\}\\}/gs');
-  const [statusFormat, setStatusFormat] = useState(
+  const [statusRegex, setStatusRegex] = usePersistentState(`line:status-regex:${contactName}`, '/\\{\\{status:(.*?)\\}\\}/gs');
+  const [statusFormat, setStatusFormat] = usePersistentState(`line:status-format:${contactName}`, 
     '<div class="tavern-status"><span class="badge">📍 {{location}}</span> <span class="badge">🕒 {{time}}</span> <span class="badge">📖 {{activity}}</span> <span class="badge-pink">💖 好感度 {{favor}}</span><div class="mood">心境：{{mood}}</div></div>'
   );
   const [statusTab, setStatusTab] = useState<'preview' | 'regex' | 'format'>('preview');
 
   // 角色个人主页 (Threads / Twitter / LINE 混合风格)
   const [showCharacterProfile, setShowCharacterProfile] = useState(false);
-  const [characterFeedPosts, setCharacterFeedPosts] = useState([
+  const [characterFeedPosts, setCharacterFeedPosts] = usePersistentState(`line:character-feed:${contactName}`, [
     {
       id: 'cp1',
       time: '2小时前',
@@ -392,15 +392,15 @@ export function LineConversationView({
 
   // 线下邀约剧情系统 (Offline Meetup System)
   const [showOfflineInviteModal, setShowOfflineInviteModal] = useState(false);
-  const [offlineInviteData, setOfflineInviteData] = useState({
+  const [offlineInviteData, setOfflineInviteData] = usePersistentState(`line:offline-draft:${contactName}`, {
     location: '神保町·雨夜旧书屋二层咖啡阁',
     time: '明晚 19:30',
     theme: '私享旧胶卷洗印与夜谈',
     letter: '前几天洗好的两卷旧胶片出来了，里面有很多你的照片。如果你明晚有空……我想亲手交给你。',
     inviteFrom: 'other' as 'me' | 'other',
   });
-  const [offlineInviteTheme, setOfflineInviteTheme] = useState<'white' | 'midnight' | 'parchment' | 'rose'>('white');
-  const [offlineInviteCustomCss, setOfflineInviteCustomCss] = useState(`/* 线下邀约卡片自定义样式 */
+  const [offlineInviteTheme, setOfflineInviteTheme] = usePersistentState<'white' | 'midnight' | 'parchment' | 'rose'>(`line:offline-theme:${contactName}`, 'white');
+  const [offlineInviteCustomCss, setOfflineInviteCustomCss] = usePersistentState(`line:offline-css:${contactName}`, `/* 线下邀约卡片自定义样式 */
 .custom-invite-card {
   box-shadow: 0 4px 14px rgba(212, 170, 181, 0.18);
 }`);
@@ -423,7 +423,7 @@ export function LineConversationView({
 
   // 角色日程
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleList, setScheduleList] = useState([
+  const [scheduleList, setScheduleList] = usePersistentState(`line:schedule:${contactName}`, [
     { id: '1', time: '08:30', title: '起床 · 冲手冲咖啡' },
     { id: '2', time: '12:30', title: '午餐 · 翻阅新寄来的摄影集' },
     { id: '3', time: '16:00', title: '散步 · 顺路买可颂' },
