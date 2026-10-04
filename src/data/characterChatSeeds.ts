@@ -8,3 +8,7 @@ export interface CharacterChatSeed {
  * Real chats are created only after a character card is imported or the user creates a chat.
  */
 export const CHARACTER_CHAT_SEEDS: CharacterChatSeed[] = [];
+
+export function getInitialChatMessages(_contactName: string): any[] {
+  return [];
+}
