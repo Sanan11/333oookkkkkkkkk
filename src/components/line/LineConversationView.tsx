@@ -741,9 +741,10 @@ export function LineConversationView({
             });
           }
           for (const item of memoryResult.items) {
-            addCharacterMemoryItem(importedCharacter.id, importedCharacter.name, item, {
+            addCharacterMemoryItem(importedCharacter.id, importedCharacter.name, item.content, {
               source: 'ai-summary',
-              importance: 70,
+              importance: item.importance,
+              kind: item.kind,
             });
           }
           window.dispatchEvent(new CustomEvent('sane333:memory-updated', {
