@@ -1,0 +1,91 @@
+export type StatusBarTarget = 'line' | 'offline' | 'character-profile' | 'moments' | 'threads';
+
+export interface StatusBarPreset {
+  id: string;
+  name: string;
+  description: string;
+  html: string;
+  regex: string;
+  targets: StatusBarTarget[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+const KEY = 'line:status-bar-presets';
+
+export const DEFAULT_STATUS_BAR_PRESETS: StatusBarPreset[] = [
+  {
+    id: 'status-minimal',
+    name: '极简日常',
+    description: '轻量地点、时间与当前状态。',
+    html: '<div class="sane-status"><div class="sane-status__line"><span>📍 {{location}}</span><span>·</span><span>{{time}}</span></div><div class="sane-status__activity">{{activity}}</div><div class="sane-status__mood">{{mood}}</div></div>',
+    regex: '/\\{\\{status:(.*?)\\}\\}/gs',
+    targets: ['line', 'offline', 'character-profile'],
+    createdAt: '2026-10-04T00:00:00.000Z',
+    updatedAt: '2026-10-04T00:00:00.000Z',
+  },
+  {
+    id: 'status-romance',
+    name: '关系记录',
+    description: '适合恋爱 / 羁绊剧情的轻量状态卡。',
+    html: '<article class="sane-status romance"><div class="sane-status__title">{{location}}</div><div class="sane-status__meta">{{time}} · {{activity}}</div><div class="sane-status__mood">{{mood}}</div><div class="sane-status__favor">♡ {{favor}}</div></article>',
+    regex: '/\\{\\{status:(.*?)\\}\\}/gs',
+    targets: ['line', 'offline'],
+    createdAt: '2026-10-04T00:00:00.000Z',
+    updatedAt: '2026-10-04T00:00:00.000Z',
+  },
+];
+
+export function getStatusBarPresets(): StatusBarPreset[] {
+  if (typeof window === 'undefined') return DEFAULT_STATUS_BAR_PRESETS;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) {
+      localStorage.setItem(KEY, JSON.stringify(DEFAULT_STATUS_BAR_PRESETS));
+      return DEFAULT_STATUS_BAR_PRESETS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : DEFAULT_STATUS_BAR_PRESETS;
+  } catch {
+    return DEFAULT_STATUS_BAR_PRESETS;
+  }
+}
+
+export function saveStatusBarPresets(presets: StatusBarPreset[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(KEY, JSON.stringify(presets));
+  window.dispatchEvent(new CustomEvent('sane333:status-bar-presets-changed'));
+}
+
+export function upsertStatusBarPreset(preset: StatusBarPreset) {
+  const presets = getStatusBarPresets();
+  saveStatusBarPresets(presets.some(item => item.id === preset.id)
+    ? presets.map(item => item.id === preset.id ? preset : item)
+    : [preset, ...presets]);
+}
+
+export function deleteStatusBarPreset(id: string) {
+  saveStatusBarPresets(getStatusBarPresets().filter(item => item.id !== id));
+}
+
+export function exportStatusBarPresets(presets = getStatusBarPresets()): string {
+  return JSON.stringify({ type: 'sane333-status-bar-presets', version: 1, exportedAt: new Date().toISOString(), presets }, null, 2);
+}
+
+export function importStatusBarPresets(raw: string): StatusBarPreset[] {
+  const parsed = JSON.parse(raw);
+  const incoming = Array.isArray(parsed) ? parsed : parsed?.presets;
+  if (!Array.isArray(incoming)) throw new Error('不是有效的状态栏预设文件。');
+  const normalized = incoming.map((item: any, index: number) => ({
+    ...item,
+    id: String(item.id || `status-import-${Date.now()}-${index}`),
+    name: String(item.name || '未命名状态栏'),
+    description: String(item.description || ''),
+    html: String(item.html || ''),
+    regex: String(item.regex || '/\\\\{\\\\{status:(.*?)\\\\}\\\\}/gs'),
+    targets: Array.isArray(item.targets) ? item.targets : ['line'],
+    createdAt: String(item.createdAt || new Date().toISOString()),
+    updatedAt: new Date().toISOString(),
+  })) as StatusBarPreset[];
+  return normalized;
+}
