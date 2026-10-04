@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ThemeMode, ScreenType } from '../types';
 import { SaneHomeScreenView } from './screens/SaneHomeScreenView';
 import { ChatScreenView } from './screens/ChatScreenView';
@@ -19,6 +19,7 @@ import { NpcScreenView } from './screens/NpcScreenView';
 import { GroupPresetScreenView } from './screens/GroupPresetScreenView';
 import { LineAppView } from './line/LineAppView';
 import { HomeCustomizeSheet } from './modals/HomeCustomizeSheet';
+import { playAppSound, type AppSoundKind } from '../store/soundManager';
 
 interface PhoneSimulatorProps {
   themeMode: ThemeMode;
@@ -39,6 +40,21 @@ export function PhoneSimulator({
   const handleToggleTheme = () => {
     onSelectTheme(isDark ? 'nordic-light' : 'dark-luxury');
   };
+
+  useEffect(() => {
+    const handleSound = (event: Event) => {
+      const custom = event as CustomEvent<{ kind?: AppSoundKind }>;
+      const kind = custom.detail?.kind;
+      if (kind) void playAppSound(kind);
+    };
+    const handleProactive = () => { void playAppSound('message'); };
+    window.addEventListener('sane333:play-sound', handleSound as EventListener);
+    window.addEventListener('sane333:proactive-message', handleProactive);
+    return () => {
+      window.removeEventListener('sane333:play-sound', handleSound as EventListener);
+      window.removeEventListener('sane333:proactive-message', handleProactive);
+    };
+  }, []);
 
   return (
     <div className="relative mx-auto flex flex-col items-center">
