@@ -9,7 +9,7 @@ import type { ImportedCharacter } from '../../data/characterImport';
 import type { CharacterAiProfile } from '../../store/characterAiProfiles';
 import { buildCharacterAiProfile } from '../../store/characterAiProfiles';
 import { usePersistentState } from '../../store/usePersistentState';
-import { DEFAULT_APP_SETTINGS, type AppSettings, saveAppSettings } from '../../store/appSettings';
+import { DEFAULT_APP_SETTINGS, type AppSettings, readAppSettings, saveAppSettings } from '../../store/appSettings';
 import { listOpenAiCompatibleModels, testAiConnection } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
 import { playAppSound, saveSoundFile, type AppSoundKind } from '../../store/soundManager';
@@ -61,7 +61,7 @@ export function SettingsScreenView({ onNavigate }: { onNavigate: (screen: Screen
   const messageSoundFileRef = useRef<HTMLInputElement>(null);
   const momentsSoundFileRef = useRef<HTMLInputElement>(null);
   const callSoundFileRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettingsState] = usePersistentState<AppSettings>('phone:settings', DEFAULT_APP_SETTINGS);
+  const [settings, setSettingsState] = usePersistentState<AppSettings>('phone:settings', () => readAppSettings());
   const [notice, setNotice] = useState('');
   const [openSection, setOpenSection] = useState<'ai' | 'voice' | 'image' | 'data' | 'sound' | 'background'>('ai');
   const [testing, setTesting] = useState(false);
