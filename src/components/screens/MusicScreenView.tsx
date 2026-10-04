@@ -48,6 +48,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
   const [strangerSession, setStrangerSession] = useState<MusicStrangerSession | null>(() => readStrangerSession());
   const [strangerLoading, setStrangerLoading] = useState(false);
   const [strangerReaction, setStrangerReaction] = useState('');
+  const [showInviteCharacter, setShowInviteCharacter] = useState(false);
 
   const selectedCharacter = useMemo(
     () => characters.find(character => character.id === selectedCharacterId) || null,
@@ -112,17 +113,54 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
     }
   };
 
+
+  const startDirectListening = async (character: ImportedCharacter) => {
+    if (!currentTrack) {
+      showToast('先播放一首歌，再邀请角色');
+      setTab('search');
+      return;
+    }
+    const session: MusicStrangerSession = {
+      mode: 'direct',
+      id: 'music-direct-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      characterId: character.id,
+      characterName: character.name,
+      variantLabel: character.variantLabel || character.characterVersion || '默认版本',
+      track: currentTrack,
+      status: 'listening',
+      reactionLog: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setStrangerSession(session);
+    saveStrangerSession(session);
+    setShowInviteCharacter(false);
+    setStrangerLoading(true);
+    setStrangerReaction('');
+    const reaction = await askStrangerReaction(session, currentTrack);
+    const next = reaction
+      ? { ...session, reactionLog: [{ trackId: currentTrack.id, text: reaction, createdAt: new Date().toISOString() }], updatedAt: new Date().toISOString() }
+      : session;
+    setStrangerSession(next);
+    saveStrangerSession(next);
+    setStrangerReaction(reaction);
+    setSelectedCharacterId(character.id);
+    setStrangerLoading(false);
+    showToast('已邀请 ' + character.name + ' 一起听歌');
+  };
+
   const askStrangerReaction = async (session: MusicStrangerSession, track: MusicTrack) => {
     const character = characters.find(item => item.id === session.characterId);
     if (!character) return '';
+    const isStranger = session.mode === 'stranger';
     try {
       const settings = readStoredAiSettings(character.id, character.name);
       return await generateCreativeText({
         settings,
         systemPrompt: [
-          '你正在参加一个“音乐陌生人”体验。',
-          '你是一个刚刚随机遇见用户的陌生人，不认识用户，不知道用户与其他角色的关系。',
-          '不要读取、假设或引用既有聊天关系、长期记忆、恋爱关系。',
+          isStranger ? '你正在参加一个“音乐陌生人”体验。' : '你正在和一个熟悉的角色关系对象一起听歌。',
+          isStranger ? '你是一个刚刚随机遇见用户的陌生人，不认识用户，不知道用户与其他角色的关系。' : '可以依据你自己的角色设定自然回应，但不要虚构不存在的共同听歌经历。',
+          isStranger ? '不要读取、假设或引用既有聊天关系、长期记忆、恋爱关系。' : '当前只是一起听歌，不要强行把聊天写成剧情。',
           '只依据你的角色卡、当前歌曲和这场第一次偶遇来回应。',
           '回复要像真实的人在音乐社交房里说话，短一些，自然，有一点人格。',
           '不要解释自己是 AI。',
@@ -133,7 +171,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
           character.scenario,
         ].join('\n'),
         userPrompt: [
-          '你刚刚和一个陌生用户随机进入同一间听歌房。',
+          isStranger ? '你刚刚和一个陌生用户随机进入同一间听歌房。' : '你刚刚收到对方发来的这首歌，正在和对方一起听。',
           '当前歌曲：《' + track.name + '》 - ' + track.artist,
           '请说一句你对这首歌的第一反应。可以喜欢、无感、吐槽，也可以问用户为什么选这首。',
         ].join('\n'),
@@ -336,6 +374,16 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
               <ChevronRight className="w-4 h-4 text-[#9c9186]" />
             </button>
 
+
+            <button onClick={() => setShowInviteCharacter(true)} className="w-full p-3 rounded-2xl bg-white/60 border border-black/5 flex items-center gap-3 text-left">
+              <div className="w-10 h-10 rounded-full bg-[#faf1f3] text-[#ae7e89] grid place-items-center"><Music2 className="w-4 h-4" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold text-[#403a34]">邀请角色一起听</div>
+                <div className="text-[8px] text-[#8d837a] mt-0.5">指定一个版本，不走陌生人模式</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#aaa]" />
+            </button>
+
             {strangerSession && (
               <section className="p-3 rounded-2xl bg-white/60 border border-[#eadfe2]">
                 <div className="text-[8px] font-mono tracking-[1.5px] text-[#9a8c7f]">MUSIC STRANGER</div>
@@ -347,7 +395,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-semibold text-[#3d3935]">{strangerSession.characterName} <span className="text-[8px] font-normal text-[#a49b95]">· {strangerSession.variantLabel}</span></div>
-                    <div className="text-[8px] text-[#9b9189]">第一次遇见 · 只因为同一首歌</div>
+                    <div className="text-[8px] text-[#9b9189]">{strangerSession.mode === 'stranger' ? '第一次遇见 · 只因为同一首歌' : '一起听歌 · 当前角色'}</div>
                   </div>
                   <UsersRound className="w-4 h-4 text-[#9b7e88]" />
                 </div>
@@ -419,6 +467,29 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
           </div>
         )}
       </div>
+
+
+      {showInviteCharacter && (
+        <div onClick={() => setShowInviteCharacter(false)} className="absolute inset-0 z-50 bg-black/25 flex items-end">
+          <div onClick={e => e.stopPropagation()} className="w-full bg-white rounded-t-[20px] p-4 pb-6 space-y-3">
+            <div className="flex items-center justify-between"><div className="font-semibold text-sm">选择一起听的人</div><button onClick={() => setShowInviteCharacter(false)}><X className="w-4 h-4 text-[#999]" /></button></div>
+            <div className="space-y-1.5 max-h-[45vh] overflow-y-auto">
+              {characters.map(character => (
+                <button key={character.id} onClick={() => void startDirectListening(character)} className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-[#faf9f7] border border-black/5 text-left">
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-[#eee9df] grid place-items-center">
+                    {character.avatar ? <img src={character.avatar} alt="" className="w-full h-full object-cover" /> : <UserRound className="w-4 h-4 text-[#aaa]" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-semibold truncate">{character.name}</div>
+                    <div className="text-[8px] text-[#999] truncate">{character.variantLabel || character.characterVersion || '默认版本'}</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#aaa]" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showApiSettings && (
         <div onClick={() => setShowApiSettings(false)} className="absolute inset-0 z-50 bg-black/25 flex items-end">
