@@ -113,11 +113,6 @@ const SEEDS: Record<string, SeedMessage[]> = {
   ),
 };
 
-export function getInitialChatMessages(contactName: string): SeedMessage[] {
-  return SEEDS[contactName] ?? makeConversation(
-    contactName || '角色',
-    '今天过得怎么样？',
-    '有空的时候再和我说说吧。',
-    '【情境感知】正在观察她今天的状态。\n【潜意识情绪】希望她知道有人愿意听。\n【回复策略】保持温和，给她足够的空间。',
-  );
+export function getInitialChatMessages(_contactName: string): SeedMessage[] {
+  return [];
 }
