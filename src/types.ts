@@ -15,7 +15,6 @@ export type ScreenType =
   | 'threads'
   | 'spy-phone'
   | 'settings'
-  | 'character-library'
   | 'offline-story';
 
 export interface CharacterInfo {
