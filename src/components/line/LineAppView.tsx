@@ -573,14 +573,14 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
               )
               .map((friend, idx) => (
                 <div
-                  key={idx}
+                  key={friend.characterId || friend.name + '-' + idx}
                   onClick={() => setActiveChatId(friend.characterId || friend.name)}
                   className="h-[67px] px-5 flex items-center cursor-pointer hover:bg-[#fafafa] active:bg-[#f5f5f5] transition-colors"
                 >
                   <div className="w-[49px] h-[49px] rounded-full bg-[#f1f1f2] border border-[#e8e8e9] flex items-center justify-center shrink-0 overflow-hidden">
-                    {importedCharacters.find(character => character.name === friend.name)?.avatar ? (
+                    {(importedCharacters.find(character => character.id === friend.characterId)?.avatar || importedCharacters.find(character => character.name === friend.name)?.avatar) ? (
                       <img
-                        src={importedCharacters.find(character => character.name === friend.name)?.avatar}
+                        src={importedCharacters.find(character => character.id === friend.characterId)?.avatar || importedCharacters.find(character => character.name === friend.name)?.avatar}
                         alt={friend.name}
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
@@ -595,7 +595,7 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
 
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="text-[14px] text-[#303134] font-medium">
-                      {friend.name}
+                      {friend.name} {friend.variantLabel && <span className="text-[8px] text-[#aaa]">· {friend.variantLabel}</span>}
                     </div>
                     <div className="text-[10px] text-[#aaa] mt-1 truncate">
                       {friend.note}
