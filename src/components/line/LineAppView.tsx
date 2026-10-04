@@ -103,18 +103,12 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
   const [importedCharacters] = usePersistentState<ImportedCharacter[]>('phone:characters', []);
 
   const [currentUser, setCurrentUser] = usePersistentState('line:current-user', {
-    name: 'Coral',
-    id: 'coral_01',
-    desc: '现在使用的身份',
+    name: '',
+    id: '',
+    desc: '',
   });
 
-  const [masks, setMasks] = usePersistentState('line:masks', [
-    { name: 'Coral', id: 'coral_01', desc: '现在使用的身份' },
-    { name: '小林', id: 'kobayashi_02', desc: '东京 · 24' },
-    { name: 'Emma', id: 'emma_03', desc: '伦敦 · 26' },
-    { name: '林安', id: 'linan_04', desc: '上海 · 25' },
-  ]);
-
+  const [masks, setMasks] = usePersistentState('line:masks', []);
   // Chat Data with Pin, Mute, Draft, and Group capabilities
   const [chatItems, setChatItems] = usePersistentState<LineChatItem[]>('line:chat-items', []);
 
