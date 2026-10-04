@@ -654,6 +654,7 @@ export function LineConversationView({
     const newMsg: any = {
       id: msgId,
       sender: 'me',
+      senderName: currentUserNameFallback() || activePersona?.name || '我',
       text: userText,
       time: '刚刚',
       isRead: false,
@@ -661,7 +662,7 @@ export function LineConversationView({
 
     if (replyingToMsg) {
       newMsg.quote = {
-        sender: replyingToMsg.sender === 'me' ? '我' : characterProfile.nickname,
+        sender: replyingToMsg.sender === 'me' ? '我' : (replyingToMsg.senderName || characterProfile.nickname),
         text: replyingToMsg.text || replyingToMsg.desc || '多媒体内容',
       };
       setReplyingToMsg(null);
@@ -678,7 +679,7 @@ export function LineConversationView({
       );
     }, 1200);
 
-    if (isGroup) {
+    if (isGroup) {\n      try {
       if (groupAiMembers.length === 0) {
         showToast('这个群还没有导入可接入 AI 的角色卡');
         return;
@@ -717,8 +718,7 @@ export function LineConversationView({
         setMessages(prev => prev.map(m => m.id === replyMsgId ? { ...m, text: result.text, senderName: character.name, aiModel: result.model, matchedWorldbookEntries: result.matchedWorldbookEntries } : m));
         workingMessages = [...workingMessages, { id: replyMsgId, sender: 'other', senderName: character.name, text: result.text }];
       }
-      return;
-    }
+        return;\n      } catch (error) {\n        const message = error instanceof Error ? error.message : '群聊 AI 请求失败';\n        showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);\n      } finally {\n        setIsTyping(false);\n      }\n    }
 
     const replyMsgId = Date.now() + 1;
     setMessages((prev) => [
