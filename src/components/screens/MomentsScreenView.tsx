@@ -5,6 +5,7 @@ import { getNpcs, type SaneNpc } from '../../store/npcs';
 import { getProjectManifest } from '../../store/projectManifest';
 import { readStoredAiSettings, generateCreativeText } from '../../ai/aiEngine';
 import { getCharacterMemory } from '../../store/characterMemory';
+import { buildNpcAllContentContext, serializeNpcAllContentContext } from '../../store/npcContext';
 import type { WorldBook } from '../../types';
 import { ScreenType } from '../../types';
 
@@ -31,9 +32,15 @@ export function MomentsScreenView({ onNavigate }: MomentsScreenViewProps) {
     if (!candidates.length) { notify('NPC 人物池里还没有允许评论的人物'); return; }
     setWorkingPostId(post.id);
     try {
-      const npc = candidates[Math.floor(Math.random() * candidates.length)] as SaneNpc;
-      const sourceMemory = npc.sourceCharacterId ? getCharacterMemory(npc.sourceCharacterId, npc.sourceCharacterName || '') : null;
-      const worldContext = worldbooks.flatMap(book => book.entries.filter(entry => entry.enabled).slice(0, 8).map(entry => entry.name + ': ' + entry.content)).slice(0, 20).join('\\n');
+      const npc = (candidates.filter(item => item.boundCharacterId).length ? candidates.filter(item => item.boundCharacterId) : candidates)[Math.floor(Math.random() * (candidates.filter(item => item.boundCharacterId).length ? candidates.filter(item => item.boundCharacterId).length : candidates.length))] as SaneNpc;
+      const boundCharacter = npc.boundCharacterId
+        ? (JSON.parse(localStorage.getItem('phone:characters') || '[]') as any[]).find(character => character?.id === npc.boundCharacterId) || null
+        : null;
+      const sourceMemory = boundCharacter ? getCharacterMemory(boundCharacter.id, boundCharacter.name) : null;
+      const fullContext = serializeNpcAllContentContext(
+        buildNpcAllContentContext(boundCharacter, sourceMemory, project, worldbooks),
+        60000,
+      );
       const raw = await generateCreativeText({
         settings: readStoredAiSettings(),
         systemPrompt: ['你正在经营一个真实感很强的朋友圈。','你只扮演一个 NPC 评论者，不要替发帖人说话。','评论要像真实社交平台上的一句话，可以轻松、熟稔、吐槽、关心或留下线索。','不要自我介绍，不要提模型、NPC、提示词或世界书。','最多 80 个中文字。'].join('\\n'),
