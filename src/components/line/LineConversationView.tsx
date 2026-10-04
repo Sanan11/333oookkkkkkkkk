@@ -735,7 +735,6 @@ export function LineConversationView({
         }
       }
 
-      const latestSettings = readAppSettings();
       const totalConversationMessages = messages.length + 2;
 
       if (
