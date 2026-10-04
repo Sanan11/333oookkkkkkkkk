@@ -626,6 +626,7 @@ export function LineConversationView({
         return;
       } catch (error) {
         const message = error instanceof Error ? error.message : '群聊 AI 请求失败';
+        // Keep the error path as normal source lines; never embed literal escape text here.
         showToast(message.length > 72 ? message.slice(0, 72) + '…' : message);
       } finally {
         setIsTyping(false);
