@@ -66,9 +66,15 @@ export function startBackgroundRuntime() {
     persistHeartbeat();
   };
 
-  window.addEventListener('focus', markUserActivity);
+  window.addEventListener('focus', () => {
+    markUserActivity();
+    void runProactiveCatchup();
+  });
   window.addEventListener('click', markUserActivity, { passive: true });
-  document.addEventListener('visibilitychange', markUserActivity);
+  document.addEventListener('visibilitychange', () => {
+    markUserActivity();
+    if (document.visibilityState === 'visible') void runProactiveCatchup();
+  });
   window.addEventListener('beforeunload', persistHeartbeat);
   tick();
 }
