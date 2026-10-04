@@ -144,6 +144,7 @@ export function MusicScreenView({ onNavigate }: MusicScreenViewProps) {
       characterId: character.id,
       characterName: character.name,
       variantLabel: character.variantLabel || character.characterVersion || '默认版本',
+      mode: 'stranger',
       track: currentTrack,
       status: 'listening',
       reactionLog: [],
