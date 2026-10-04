@@ -23,6 +23,7 @@ interface LineConversationViewProps {
   isMuted?: boolean;
   onTogglePin?: () => void;
   onToggleMute?: () => void;
+  onConversationActivity?: (activity: { preview: string; time: string }) => void;
   globalFavorites?: any[];
   onSaveFavorite?: (fav: any) => void;
 }
@@ -36,6 +37,7 @@ export function LineConversationView({
   isMuted = false,
   onTogglePin,
   onToggleMute,
+  onConversationActivity,
 }: LineConversationViewProps) {
   // Input & Messages
   const [inputText, setInputText] = useState(initialDraft);
@@ -406,8 +408,34 @@ export function LineConversationView({
     setTimeout(() => setToastMsg(''), 1800);
   };
 
+  const hasMountedConversationRef = useRef(false);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Keep the parent chat list synchronized with the newest message.
+  useEffect(() => {
+    if (!hasMountedConversationRef.current) {
+      hasMountedConversationRef.current = true;
+      return;
+    }
+
+    const latest = messages[messages.length - 1];
+    if (!latest || !onConversationActivity) return;
+
+    const preview =
+      latest.text ||
+      latest.transcript ||
+      (latest.type === 'offline-invite' ? '💌 线下剧情邀约' : '') ||
+      (latest.type === 'real-media' ? `[媒体] ${latest.fileName || '附件'}` : '') ||
+      (latest.type === 'ai-card' ? `[${latest.title || '多媒体'}]` : '') ||
+      '新消息';
+
+    onConversationActivity({
+      preview: String(preview).replace(/\\s+/g, ' ').slice(0, 80),
+      time: latest.time || '刚刚',
+    });
   }, [messages]);
 
   useEffect(() => {
