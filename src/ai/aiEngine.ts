@@ -532,3 +532,62 @@ export async function listOpenAiCompatibleModels(
     .map((item: any) => typeof item === 'string' ? item : item?.id)
     .filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
 }
+
+
+export async function summarizeConversationMemory(
+  settings: AiSettings,
+  characterName: string,
+  currentMemory: CharacterMemory,
+  messages: Array<{ sender: string; text?: string; transcript?: string }>,
+): Promise<{ summary: string; items: string[] }> {
+  const conversation = messages
+    .slice(-40)
+    .map(message => {
+      const speaker = message.sender === 'other' ? characterName : message.sender === 'me' ? '用户' : '系统';
+      return speaker + ': ' + (message.text || message.transcript || '[媒体消息]');
+    })
+    .join('\n');
+
+  const systemPrompt = [
+    '你是 Sane333 的长期记忆整理器。',
+    '请从最近的角色扮演聊天中提取值得长期保留的事实。',
+    '只保留稳定、可复用的信息：关系变化、重要经历、承诺、偏好、人物设定变化、正在持续的事件。',
+    '不要记录一次性的闲聊，不要把猜测当事实，不要替用户臆造经历。',
+    '输出严格 JSON，不要 Markdown。',
+    '格式：',
+    JSON.stringify({
+      summary: '一段 80-220 字的长期摘要',
+      items: ['事实 1', '事实 2', '事实 3'],
+    }),
+  ].join('\n');
+
+  const userPrompt = [
+    '【角色】' + characterName,
+    '【已有长期记忆摘要】',
+    currentMemory.summary || '暂无',
+    '【已有重要记忆】',
+    currentMemory.items.slice(0, 15).map(item => '- ' + item.content).join('\n') || '暂无',
+    '',
+    '【最近聊天】',
+    conversation || '暂无',
+    '',
+    '请合并旧记忆与新聊天，去重后输出最多 12 条最值得长期保存的新事实。',
+  ].join('\n');
+
+  const raw = await generateCreativeText({
+    settings,
+    systemPrompt,
+    userPrompt,
+    temperature: 0.2,
+  });
+
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const parsed = JSON.parse(cleaned);
+
+  return {
+    summary: typeof parsed?.summary === 'string' ? parsed.summary.trim() : currentMemory.summary,
+    items: Array.isArray(parsed?.items)
+      ? parsed.items.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0).map((item: string) => item.trim()).slice(0, 12)
+      : [],
+  };
+}
