@@ -2,7 +2,8 @@ import type { ImportedCharacter } from '../data/characterImport';
 import type { ProjectManifest, WorldBook } from '../types';
 import type { CharacterMemory } from '../store/characterMemory';
 import { buildMemoryContext } from '../store/characterMemory';
-import { DEFAULT_APP_SETTINGS, type AppSettings, readAppSettings } from '../store/appSettings';
+import type { AppSettings } from '../store/appSettings';
+import { readAppSettings } from '../store/appSettings';
 
 export type AiSettings = Pick<AppSettings, 'provider' | 'apiBaseUrl' | 'apiKey' | 'model' | 'streaming' | 'contextLength' | 'autoSave' | 'temperature'>;
 
@@ -45,16 +46,6 @@ export interface AiReplyResult {
   provider: AiSettings['provider'];
   model: string;
   matchedWorldbookEntries: number;
-}
-
-function readJson<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 export function readStoredAiSettings(): AiSettings {
@@ -334,7 +325,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
     })),
     generationConfig: {
       temperature: Math.max(0, Math.min(2, input.temperature ?? settings.temperature ?? 0.85)),
-      maxOutputTokens: 1200,
+      maxOutputTokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
     },
   };
 
@@ -371,8 +362,8 @@ async function callOpenAiCompatible(input: AiReplyInput): Promise<string> {
   const body = {
     model: input.settings.model.trim(),
     stream: Boolean(input.settings.streaming),
-    temperature: Math.max(0, Math.min(2, input.temperature ?? 0.85)),
-    max_tokens: 1200,
+    temperature: Math.max(0, Math.min(2, input.temperature ?? settings.temperature ?? 0.85)),
+    max_tokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
     messages: [
       { role: 'system', content: system },
       ...buildConversationMessages(input).map(message => ({
@@ -501,7 +492,7 @@ export async function generateCreativeText(input: CreativeTextInput): Promise<st
       model: input.settings.model.trim(),
       stream: Boolean(input.settings.streaming),
       temperature,
-      max_tokens: 2200,
+      max_tokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 2200)),
       messages: [
         { role: 'system', content: input.systemPrompt },
         ...history,
@@ -515,4 +506,24 @@ export async function generateCreativeText(input: CreativeTextInput): Promise<st
   const text = extractOpenAiText(data).trim();
   input.onDelta?.(text);
   return text;
+}
+
+
+export async function listOpenAiCompatibleModels(
+  settings: AiSettings,
+): Promise<string[]> {
+  if (!settings.apiKey.trim()) throw new Error('AI_NOT_CONFIGURED');
+  const base = settings.apiBaseUrl.trim().replace(/\/+$/, '');
+  if (!base) throw new Error('AI_BASE_URL_MISSING');
+  const endpoint = /\/models$/i.test(base) ? base : base + '/models';
+  const response = await fetch(endpoint, {
+    method: 'GET',
+    headers: { Authorization: 'Bearer ' + settings.apiKey.trim() },
+  });
+  if (!response.ok) throw new Error('AI_MODELS_' + response.status + ': ' + await readError(response));
+  const data = await response.json();
+  const models = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : [];
+  return models
+    .map((item: any) => typeof item === 'string' ? item : item?.id)
+    .filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0);
 }
