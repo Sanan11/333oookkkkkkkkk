@@ -5,6 +5,7 @@ import type { WorldBook } from '../../types';
 import { generateCharacterReply, readStoredAiSettings } from '../../ai/aiEngine';
 import { generateImage, generateSpeech } from '../../ai/mediaEngine';
 import { readAppSettings } from '../../store/appSettings';
+import { getMedia, putMedia } from '../../store/mediaVault';
 import { getCharacterMemory } from '../../store/characterMemory';
 import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterProfile } from '../../data/characterProfiles';
@@ -89,6 +90,7 @@ export function LineConversationView({
 
   // 全屏大图 Lightbox
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
 
   // 消息编辑状态 (In-place Message Edit)
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -461,16 +463,18 @@ export function LineConversationView({
         reader.onload = () => {
           const audioUrl = typeof reader.result === 'string' ? reader.result : '';
           if (!audioUrl) return;
-          setMessages(prev => [...prev, {
-            id: Date.now(),
-            sender: 'me',
-            type: 'voice',
-            duration: `0:${elapsed < 10 ? `0${elapsed}` : elapsed}`,
-            transcript: '（真实语音消息）',
-            audioUrl,
-            time: '刚刚',
-          }]);
-          showToast('真实语音已发送');
+          void putMedia(audioUrl).then(mediaRef => {
+            setMessages(prev => [...prev, {
+              id: Date.now(),
+              sender: 'me',
+              type: 'voice',
+              duration: `0:${elapsed < 10 ? `0${elapsed}` : elapsed}`,
+              transcript: '（真实语音消息）',
+              mediaRef,
+              time: '刚刚',
+            }]);
+            showToast('真实语音已发送');
+          }).catch(() => showToast('语音保存失败，请重试'));
         };
         reader.readAsDataURL(blob);
       };
@@ -498,6 +502,29 @@ export function LineConversationView({
   };
 
   const hasMountedConversationRef = useRef(false);
+
+  useEffect(() => {
+    const refs = Array.from(new Set(
+      messages
+        .map(message => message.mediaRef as string | undefined)
+        .filter(Boolean)
+    )) as string[];
+
+    if (!refs.length) return;
+
+    let cancelled = false;
+    void Promise.all(refs.map(async ref => {
+      if (mediaCache[ref]) return [ref, mediaCache[ref]] as const;
+      const url = await getMedia(ref).catch(() => null);
+      return url ? [ref, url] as const : null;
+    })).then(entries => {
+      if (cancelled) return;
+      const loaded = Object.fromEntries(entries.filter(Boolean) as Array<[string, string]>);
+      if (Object.keys(loaded).length) setMediaCache(prev => ({ ...prev, ...loaded }));
+    });
+
+    return () => { cancelled = true; };
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1062,13 +1089,15 @@ export function LineConversationView({
       showToast('图片模型正在生成……');
       try {
         const result = await generateImage(prompt, settings);
+        const mediaRef = result.url.startsWith('data:') ? await putMedia(result.url) : undefined;
         setMessages((prev) => [...prev, {
           id: Date.now(),
           sender: 'me',
           type: 'real-media',
           mediaType: 'image',
           fileName: 'AI_Image.png',
-          mediaUrl: result.url,
+          mediaUrl: mediaRef ? undefined : result.url,
+          mediaRef,
           time: '刚刚',
           alt: prompt,
         }]);
@@ -1084,13 +1113,14 @@ export function LineConversationView({
       showToast('语音正在生成……');
       try {
         const result = await generateSpeech(prompt, settings);
+        const mediaRef = result.url ? await putMedia(result.url) : undefined;
         setMessages((prev) => [...prev, {
           id: Date.now(),
           sender: 'me',
           type: 'voice',
           transcript: prompt,
           duration: Math.max(1, Math.round(prompt.length / 5)) + '"',
-          audioUrl: result.url || undefined,
+          mediaRef,
           time: '刚刚',
         }]);
         showToast(result.source === 'browser' ? '已调用浏览器语音' : 'AI 语音已发送');
@@ -1136,25 +1166,25 @@ export function LineConversationView({
         const mediaUrl = typeof reader.result === 'string' ? reader.result : '';
         if (!mediaUrl) return;
 
-        const newMsg = {
-          id: Date.now(),
-          sender: 'me',
-          type: type === 'voice' ? 'voice' : 'real-media',
-          mediaType: type,
-          fileName: file.name,
-          mediaUrl,
-          imageData: type === 'image' ? mediaUrl : undefined,
-          audioUrl: type === 'voice' ? mediaUrl : undefined,
-          transcript: type === 'voice' ? '（本地语音消息）' : undefined,
-          duration: type === 'voice' ? '语音' : undefined,
-          time: '刚刚',
-        };
+        void putMedia(mediaUrl).then(async mediaRef => {
+          const newMsg = {
+            id: Date.now(),
+            sender: 'me',
+            type: type === 'voice' ? 'voice' : 'real-media',
+            mediaType: type,
+            fileName: file.name,
+            mediaRef,
+            imageData: type === 'image' ? mediaUrl : undefined,
+            transcript: type === 'voice' ? '（本地语音消息）' : undefined,
+            duration: type === 'voice' ? '语音' : undefined,
+            time: '刚刚',
+          };
 
-        setMessages(prev => [...prev, newMsg]);
+          setMessages(prev => [...prev, newMsg]);
         setSubSheetType(null);
         showToast(`${typeLabels[type]}已发送：${file.name}`);
 
-        if (type === 'image') {
+          if (type === 'image') {
           const settings = readStoredAiSettings();
           if (!settings.apiKey.trim()) return;
 
@@ -1217,7 +1247,8 @@ export function LineConversationView({
           } finally {
             setIsTyping(false);
           }
-        }
+          }
+        }).catch(() => showToast('媒体保存失败，请重试'));
       };
       reader.readAsDataURL(file);
       return;
@@ -1801,13 +1832,13 @@ export function LineConversationView({
                     }}
                     className="p-3 rounded-[14px] bg-[#fafafa] border border-[#e8e8e9] space-y-1 text-xs"
                   >
-                    {msg.mediaType === 'image' && msg.mediaUrl ? (
+                    {(msg.mediaType === 'image' && (msg.mediaUrl || (msg.mediaRef && mediaCache[msg.mediaRef]))) ? (
                       <div className="space-y-1.5">
                         <img
-                          src={msg.mediaUrl}
+                          src={msg.mediaUrl || mediaCache[msg.mediaRef]}
                           alt={msg.alt || msg.fileName}
                           className="max-w-full max-h-[260px] rounded-[11px] object-cover cursor-pointer"
-                          onClick={() => setLightboxImg(msg.mediaUrl)}
+                          onClick={() => setLightboxImg(msg.mediaUrl || mediaCache[msg.mediaRef])}
                         />
                         <div className="text-[10px] text-[#999]">{msg.fileName}</div>
                       </div>
@@ -1851,8 +1882,8 @@ export function LineConversationView({
                       <span className="text-[10px] text-[#999]">{msg.duration}</span>
                     </div>
 
-                    {msg.audioUrl && (
-                      <audio controls preload="none" src={msg.audioUrl} className="w-[190px] h-8 mt-1" />
+                    {(msg.audioUrl || (msg.mediaRef && mediaCache[msg.mediaRef])) && (
+                      <audio controls preload="none" src={msg.audioUrl || mediaCache[msg.mediaRef]} className="w-[190px] h-8 mt-1" />
                     )}
                     {showTranscriptMap[msg.id] && (
                       <div className="p-2.5 rounded-[9px] bg-[#fafafa] border border-[#f0f0f1] text-[#888] text-[10px] leading-relaxed animate-in fade-in">
