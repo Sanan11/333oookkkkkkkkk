@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { usePersistentState } from '../../store/usePersistentState';
 import type { ImportedCharacter } from '../../data/characterImport';
 import type { WorldBook } from '../../types';
-import { generateCharacterReply, generateCreativeText, readStoredAiSettings } from '../../ai/aiEngine';
+import { generateCharacterReply, generateCreativeText, readStoredAiSettings, summarizeConversationMemory } from '../../ai/aiEngine';
 import { generateImage, generateSpeech, transcribeAudio } from '../../ai/mediaEngine';
 import { readAppSettings } from '../../store/appSettings';
 import { getMedia, putMedia } from '../../store/mediaVault';
-import { getCharacterMemory } from '../../store/characterMemory';
+import { addCharacterMemoryItem, getCharacterMemory, updateCharacterMemory } from '../../store/characterMemory';
 import { getProjectManifest } from '../../store/projectManifest';
 import { getCharacterProfile } from '../../data/characterProfiles';
 import { getInitialChatMessages } from '../../data/characterChatSeeds';
@@ -716,6 +716,41 @@ export function LineConversationView({
         } catch {
           // Voice failure must never break the chat response.
         }
+      }
+
+      const latestSettings = readAppSettings();
+      const totalConversationMessages = messages.length + 2;
+
+      if (
+        latestSettings.autoMemoryEnabled &&
+        importedCharacter &&
+        latestSettings.autoMemoryEveryMessages > 0 &&
+        totalConversationMessages % latestSettings.autoMemoryEveryMessages === 0
+      ) {
+        void summarizeConversationMemory(
+          readStoredAiSettings(importedCharacter.id, contactName),
+          contactName,
+          characterMemory,
+          [...messages, newMsg, { sender: 'other', text: result.text }]
+        ).then(memoryResult => {
+          if (memoryResult.summary.trim()) {
+            updateCharacterMemory(importedCharacter.id, importedCharacter.name, {
+              summary: memoryResult.summary,
+            });
+          }
+          for (const item of memoryResult.items) {
+            addCharacterMemoryItem(importedCharacter.id, importedCharacter.name, item, {
+              source: 'ai-summary',
+              importance: 70,
+            });
+          }
+          window.dispatchEvent(new CustomEvent('sane333:memory-updated', {
+            detail: { characterId: importedCharacter.id },
+          }));
+          showToast('长期记忆已自动整理 ✦');
+        }).catch(() => {
+          // Memory maintenance must never interrupt the conversation.
+        });
       }
 
       // 角色好感度微增
