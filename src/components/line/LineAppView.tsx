@@ -206,8 +206,40 @@ export function LineAppView({ onNavigateHome }: LineAppViewProps) {
         // Keep current in-memory list.
       }
     };
+
+    const handleMusicInvite = (event: Event) => {
+      try {
+        const detail = (event as CustomEvent<{ session?: { id: string; characterId: string; characterName: string; variantLabel?: string; track: { name: string }; mode: 'direct' | 'stranger' } }>).detail;
+        const session = detail?.session;
+        if (!session?.id) return;
+        setChatItems(prev => {
+          if (prev.some(item => item.id === session.id)) return prev;
+          const item: LineChatItem = {
+            id: session.id,
+            name: session.characterName,
+            characterId: session.characterId,
+            variantLabel: session.variantLabel || '默认版本',
+            chatLabel: session.mode === 'stranger' ? '音乐陌生人' : '一起听歌',
+            time: '刚刚',
+            preview: '🎵 ' + session.track.name,
+            unread: 1,
+            isPinned: false,
+            isMuted: false,
+            draft: '',
+            isGroup: false,
+          };
+          return [item, ...prev];
+        });
+      } catch {
+        // Ignore malformed invite events.
+      }
+    };
     window.addEventListener('sane333:proactive-message', refreshFromRuntime);
-    return () => window.removeEventListener('sane333:proactive-message', refreshFromRuntime);
+    window.addEventListener('sane333:music-invite-created', handleMusicInvite);
+    return () => {
+      window.removeEventListener('sane333:proactive-message', refreshFromRuntime);
+      window.removeEventListener('sane333:music-invite-created', handleMusicInvite);
+    };
   }, []);
 
   // Imported character cards automatically become LINE contacts.
