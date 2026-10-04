@@ -7,11 +7,7 @@ interface NotesScreenViewProps {
 }
 
 export function NotesScreenView({ onNavigate }: NotesScreenViewProps) {
-  const notes = [
-    { title: '灵感碎片 · 雨夜', date: 'OCT 02', excerpt: '“雨天，伦敦，二手书店，羊角面包的香味……把今天留给自己。”', tag: '随手记' },
-    { title: '私密便签 · 此刻', date: 'SEP 28', excerpt: '“有些话只适合写在纸条上丢进风里，被他轻轻接住。”', tag: '心灵' },
-    { title: '待办与采购', date: 'SEP 20', excerpt: '胶卷2卷（Ilford HP5）、羊奶咖啡豆、给猫咪梳毛。', tag: '日常' },
-  ];
+  const notes: Array<{ title: string; date: string; excerpt: string; tag: string }> = [];
 
   return (
     <div 
