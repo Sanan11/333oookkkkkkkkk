@@ -966,7 +966,7 @@ export function LineConversationView({
 
     upsertOfflineEvent({
       id: `offline-${inviteId}`,
-      characterId: contactName,
+      characterId: importedCharacter?.id || contactName,
       characterName: characterProfile.nickname,
       title: offlineInviteData.theme || `与 ${characterProfile.nickname} 的线下见面`,
       location: offlineInviteData.location,
