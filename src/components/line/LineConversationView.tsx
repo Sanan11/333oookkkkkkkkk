@@ -13,6 +13,7 @@ import { getInitialChatMessages } from '../../data/characterChatSeeds';
 import { upsertOfflineEvent, updateOfflineEvent } from '../../store/offlineEvents';
 import { getLineGroupByName } from '../../store/lineGroups';
 import { getGroupPreset, getGroupPresets } from '../../store/groupPresets';
+import { createTogetherMusicSession, type TogetherMusicSession } from '../../store/togetherMusic';
 import {
   Video, Settings, Plus, Mic, Send, Smile,
   Image as ImageIcon, Film, FileText, Calendar, Sliders, RefreshCw, X,
@@ -21,7 +22,7 @@ import {
   Edit3, Brain, Play, Check, Trash2, Copy, Sparkle, Compass, Terminal,
   Phone, Search, CornerUpLeft, Share2, Download, AlertCircle, VolumeX,
   CheckSquare, Square, Pin, PinOff, Bell, BellOff, Bookmark, BookmarkCheck,
-  FileDown, MessageCircle, Heart
+  FileDown, MessageCircle, Heart, Music2
 } from 'lucide-react';
 
 function currentUserNameFallback(): string {
@@ -90,6 +91,10 @@ export function LineConversationView({
   const [showVoiceSheet, setShowVoiceSheet] = useState(false);
   const [showStickerSheet, setShowStickerSheet] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
+  const [showTogetherMusic, setShowTogetherMusic] = useState(false);
+  const [musicTitle, setMusicTitle] = useState('');
+  const [musicArtist, setMusicArtist] = useState('');
+  const [musicUrl, setMusicUrl] = useState('');
   const [creatorType, setCreatorType] = useState<'image' | 'video' | 'file' | 'voice'>('image');
   const [creatorPrompt, setCreatorPrompt] = useState('');
   
@@ -162,6 +167,7 @@ export function LineConversationView({
   const [nudgeAvatar, setNudgeAvatar] = useState(false);
   const [localPinned, setLocalPinned] = useState(isPinned);
   const [localMuted, setLocalMuted] = useState(isMuted);
+  const [togetherMusic, setTogetherMusic] = usePersistentState<TogetherMusicSession | null>('line:together-music:' + conversationStorageId, null);
 
   // 我的人设管理器 (User Persona Manager)
   const [showPersonaManager, setShowPersonaManager] = useState(false);
@@ -1753,6 +1759,23 @@ export function LineConversationView({
         </div>
 
         {messages.map((msg) => {
+          if (msg.type === 'music-together') {
+            const session = msg.musicSession as TogetherMusicSession | undefined;
+            if (!session) return null;
+            return (
+              <div key={msg.id} className={'flex ' + (msg.sender === 'me' ? 'justify-end' : 'justify-start') + ' mb-2'}>
+                <div className="max-w-[82%] rounded-[15px] border border-[#e8ddd3] bg-[#fbf7f1] p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-full bg-[#292724] text-white grid place-items-center"><Music2 className="w-4 h-4" /></div>
+                    <div className="min-w-0"><div className="text-[8px] font-mono tracking-[1.2px] text-[#9a8c7f]">TOGETHER LISTENING</div><div className="text-[11px] font-semibold text-[#403a34] truncate">{session.title}</div><div className="text-[9px] text-[#8a8179] truncate">{session.artist}</div></div>
+                  </div>
+                  <audio controls preload="metadata" src={session.url} className="w-full h-8 mt-2" />
+                  <div className="mt-2 text-[8px] text-[#a0958d]">已邀请一起听歌 · 这个聊天的听歌会话独立保存</div>
+                </div>
+              </div>
+            );
+          }
+
           if (msg.type === 'system-nudge') {
             return (
               <div key={msg.id} className="flex justify-center my-1.5 animate-in fade-in">
@@ -2385,6 +2408,39 @@ export function LineConversationView({
         </div>
       )}
 
+      {/* 一起听歌抽屉 */}
+      {showTogetherMusic && (
+        <div onClick={() => setShowTogetherMusic(false)} className="absolute inset-0 bg-black/25 z-50 flex items-end animate-in fade-in">
+          <div onClick={(e) => e.stopPropagation()} className="w-full bg-white rounded-t-[20px] p-4 pb-7 space-y-3.5 animate-in slide-in-from-bottom">
+            <div className="w-8 h-1 bg-[#ddd] rounded-full mx-auto" />
+            <div className="flex items-center gap-2"><Music2 className="w-4 h-4 text-[#8b7560]" /><div className="font-semibold text-sm text-[#333]">邀请一起听歌</div></div>
+            <div className="text-[9px] text-[#999] leading-relaxed">填写一个可以在浏览器直接播放的音频链接。以后可以继续接入你的在线音乐曲库。</div>
+            <input value={musicTitle} onChange={e => setMusicTitle(e.target.value)} placeholder="歌曲名称" className="w-full p-2.5 bg-[#f7f7f8] rounded-xl text-xs outline-none" />
+            <input value={musicArtist} onChange={e => setMusicArtist(e.target.value)} placeholder="歌手 / 艺术家" className="w-full p-2.5 bg-[#f7f7f8] rounded-xl text-xs outline-none" />
+            <input value={musicUrl} onChange={e => setMusicUrl(e.target.value)} placeholder="音频 URL（mp3 / wav / ogg 等）" className="w-full p-2.5 bg-[#f7f7f8] rounded-xl text-[10px] font-mono outline-none" />
+            {togetherMusic && <div className="p-2.5 rounded-xl bg-[#faf3f5] border border-[#f0dee3] text-[9px] text-[#8d7078]">当前一起听：{togetherMusic.title} · {togetherMusic.artist}</div>}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setShowTogetherMusic(false)} className="py-2.5 rounded-xl bg-[#f5f5f5] text-[#777] text-xs">取消</button>
+              <button
+                onClick={() => {
+                  const title = musicTitle.trim();
+                  const artist = musicArtist.trim() || '未知艺术家';
+                  const url = musicUrl.trim();
+                  if (!title || !url) { showToast('请输入歌曲名称和音频链接'); return; }
+                  const session = createTogetherMusicSession({ conversationId: conversationStorageId, title, artist, url, startedBy: 'me', status: 'invited' });
+                  setTogetherMusic(session);
+                  setMessages(prev => [...prev, { id: Date.now(), sender: 'me', senderName: currentUserNameFallback() || activePersona?.name || '我', text: '邀请你一起听歌：《' + title + '》', time: '刚刚', type: 'music-together', musicSession: session }]);
+                  setMusicTitle(''); setMusicArtist(''); setMusicUrl('');
+                  setShowTogetherMusic(false);
+                  showToast('已发出一起听歌邀请 ♪');
+                }}
+                className="py-2.5 rounded-xl bg-[#292724] text-white text-xs"
+              >发出邀请 ♪</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 5. 语音选项抽屉 */}
       {showVoiceSheet && (
         <div
@@ -2493,6 +2549,20 @@ export function LineConversationView({
                   <FileText className="w-5 h-5" />
                 </div>
                 <span>文件</span>
+              </button>
+
+              {/* 一起听歌 */}
+              <button
+                onClick={() => {
+                  setShowPlusSheet(false);
+                  setShowTogetherMusic(true);
+                }}
+                className="flex flex-col items-center gap-1.5 cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-[14px] bg-[#f6f2ed] flex items-center justify-center text-[#8b7560] hover:bg-[#eee6dc]">
+                  <Music2 className="w-5 h-5" />
+                </div>
+                <span>一起听歌</span>
               </button>
 
               {/* 线下邀约 */}
