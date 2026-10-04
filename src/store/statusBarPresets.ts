@@ -89,3 +89,9 @@ export function importStatusBarPresets(raw: string): StatusBarPreset[] {
   })) as StatusBarPreset[];
   return normalized;
 }
+
+export type StatusBarAssignments = Partial<Record<StatusBarTarget, string>>;
+const ASSIGN_KEY = 'line:status-bar-assignments';
+export function getStatusBarAssignments(): StatusBarAssignments { if (typeof window === 'undefined') return {}; try { return JSON.parse(window.localStorage.getItem(ASSIGN_KEY) || '{}'); } catch { return {}; } }
+export function saveStatusBarAssignment(target: StatusBarTarget, presetId: string) { if (typeof window === 'undefined') return; const next={...getStatusBarAssignments(),[target]:presetId}; window.localStorage.setItem(ASSIGN_KEY,JSON.stringify(next)); window.dispatchEvent(new CustomEvent('sane333:status-bar-assignments-changed')); }
+export function getStatusBarForTarget(target: StatusBarTarget): StatusBarPreset | null { const id=getStatusBarAssignments()[target]; return getStatusBarPresets().find(item=>item.id===id) || getStatusBarPresets().find(item=>item.targets.includes(target)) || null; }
