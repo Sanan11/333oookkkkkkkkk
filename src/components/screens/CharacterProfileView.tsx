@@ -233,7 +233,7 @@ export function CharacterProfileView({ onNavigate }: CharacterProfileViewProps) 
                 先把你的角色带进来。
               </h3>
               <p className="mt-2 font-serif-sc text-xs leading-relaxed text-[#5b554f]">
-                支持 PNG 角色卡、JSON、YAML / YML。导入后会保存在本机，不会把 Ethan、顾言之类的演示数据冒充成你的角色。
+                支持 PNG 角色卡、JSON、YAML / YML。导入后会保存在本机；当前项目不会预置任何角色数据。
               </p>
               <button
                 onClick={() => fileRef.current?.click()}
