@@ -250,7 +250,7 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
           </div>
 
           {/* Page 1 Apps: LINE, IG, 音乐, 线下剧情 */}
-          <section className="absolute z-10 left-[26px] right-[20px] top-[565px] flex gap-[24px]">
+          <section className="absolute z-10 left-[20px] right-[20px] top-[565px] flex gap-[12px]">
             <button 
               onClick={() => onNavigate('chat')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
@@ -438,7 +438,19 @@ export function SaneHomeScreenView({ onNavigate, onOpenSheet, onToggleTheme }: S
               <span className="font-semibold tracking-tight text-[var(--ink)]">Threads</span>
             </button>
 
-            {/* App 2: 查手机 */}
+            {/* App 2: NPC 人物池 */}
+            <button
+              onClick={() => onNavigate('npc')}
+              className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
+            >
+              <div className="w-[64px] h-[64px] rounded-[21px] bg-[#ebe2dc] text-[#5f554f] border border-[rgba(40,36,31,.08)] shadow-[0_6px_18px_rgba(52,43,34,.07)] grid place-items-center group-hover:scale-105 transition-transform relative">
+                <span className="text-[19px] font-serif">人</span>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#caa9ad] border border-white" />
+              </div>
+              <span className="font-semibold tracking-tight text-[var(--ink)]">NPC</span>
+            </button>
+
+            {/* App 3: 查手机 */}
             <button 
               onClick={() => onNavigate('spy-phone')}
               className="flex flex-col items-center gap-2 text-[10px] tracking-[0.4px] text-[var(--sub,#68625b)] active:scale-95 transition-transform group"
