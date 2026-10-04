@@ -330,7 +330,7 @@ async function callGemini(input: AiReplyInput): Promise<string> {
     })),
     generationConfig: {
       temperature: Math.max(0, Math.min(2, input.temperature ?? input.settings.temperature ?? 0.85)),
-      maxOutputTokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 1200)),
+      maxOutputTokens: Math.max(128, Math.min(12000, Number(input.settings.maxOutputTokens) || 1200)),
     },
   };
 
@@ -497,7 +497,7 @@ export async function generateCreativeText(input: CreativeTextInput): Promise<st
       model: input.settings.model.trim(),
       stream: Boolean(input.settings.streaming),
       temperature,
-      max_tokens: Math.max(128, Math.min(12000, Number(readAppSettings().maxOutputTokens) || 2200)),
+      max_tokens: Math.max(128, Math.min(12000, Number(input.settings.maxOutputTokens) || 2200)),
       messages: [
         { role: 'system', content: input.systemPrompt },
         ...history,
